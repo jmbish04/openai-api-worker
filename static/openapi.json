@@ -1,0 +1,531 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "OpenAI-Compatible API Worker",
+    "description": "A Cloudflare Worker that exposes Cloudflare AI models through an OpenAI-compatible API interface",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://openai-api-worker.your-subdomain.workers.dev",
+      "description": "Production server"
+    },
+    {
+      "url": "http://localhost:8787",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Landing page",
+        "description": "Returns the API documentation landing page",
+        "responses": {
+          "200": {
+            "description": "HTML landing page",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification",
+        "description": "Returns the OpenAPI specification for this API",
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns the health status of the API",
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "openai-api-worker"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "get": {
+        "summary": "List available models",
+        "description": "Lists the currently available models, and provides basic information about each one",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of available models",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "example": "list"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Model"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/v1/chat/completions": {
+      "post": {
+        "summary": "Create chat completion",
+        "description": "Creates a model response for the given chat conversation",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chat completion response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Server-sent events stream for streaming responses"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/v1/completions": {
+      "post": {
+        "summary": "Create completion (legacy)",
+        "description": "Creates a completion for the provided prompt and parameters (legacy endpoint)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Completion response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key authentication"
+      }
+    },
+    "schemas": {
+      "Model": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "gpt-4"
+          },
+          "object": {
+            "type": "string",
+            "example": "model"
+          },
+          "created": {
+            "type": "integer",
+            "example": 1677610602
+          },
+          "owned_by": {
+            "type": "string",
+            "example": "cloudflare"
+          }
+        }
+      },
+      "ChatMessage": {
+        "type": "object",
+        "required": ["role", "content"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["system", "user", "assistant"],
+            "description": "The role of the message author"
+          },
+          "content": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Text content"
+              },
+              {
+                "type": "array",
+                "description": "Multimodal content (text + images)",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["text", "image_url"]
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "image_url": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "Image URL or base64 data URL"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "ChatCompletionRequest": {
+        "type": "object",
+        "required": ["model", "messages"],
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "ID of the model to use",
+            "example": "gpt-4",
+            "enum": [
+              "gpt-4",
+              "gpt-4-turbo",
+              "gpt-4o",
+              "gpt-4o-mini",
+              "gpt-3.5-turbo",
+              "@cf/meta/llama-4-scout-17b-16e-instruct",
+              "@cf/openai/gpt-oss-120b"
+            ]
+          },
+          "messages": {
+            "type": "array",
+            "description": "List of messages comprising the conversation",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            }
+          },
+          "max_tokens": {
+            "type": "integer",
+            "description": "Maximum number of tokens to generate",
+            "default": 2048,
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature between 0 and 2",
+            "default": 0.7,
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "type": "number",
+            "description": "Nucleus sampling parameter",
+            "default": 1,
+            "minimum": 0,
+            "maximum": 1
+          },
+          "stream": {
+            "type": "boolean",
+            "description": "Whether to stream back partial progress",
+            "default": false
+          },
+          "frequency_penalty": {
+            "type": "number",
+            "description": "Frequency penalty between -2.0 and 2.0",
+            "default": 0,
+            "minimum": -2,
+            "maximum": 2
+          },
+          "presence_penalty": {
+            "type": "number",
+            "description": "Presence penalty between -2.0 and 2.0",
+            "default": 0,
+            "minimum": -2,
+            "maximum": 2
+          }
+        }
+      },
+      "CompletionRequest": {
+        "type": "object",
+        "required": ["model", "prompt"],
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "ID of the model to use",
+            "example": "gpt-3.5-turbo"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The prompt to generate completions for"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "description": "Maximum number of tokens to generate",
+            "default": 100
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature",
+            "default": 0.7
+          }
+        }
+      },
+      "ChatCompletionResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "chatcmpl-123"
+          },
+          "object": {
+            "type": "string",
+            "example": "chat.completion"
+          },
+          "created": {
+            "type": "integer",
+            "example": 1677652288
+          },
+          "model": {
+            "type": "string",
+            "example": "gpt-4"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "message": {
+                  "$ref": "#/components/schemas/ChatMessage"
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "enum": ["stop", "length", "content_filter"]
+                }
+              }
+            }
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "prompt_tokens": {
+                "type": "integer"
+              },
+              "completion_tokens": {
+                "type": "integer"
+              },
+              "total_tokens": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Authentication information is missing or invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "message": "Invalid API key",
+                "type": "invalid_request_error"
+              }
+            }
+          }
+        }
+      },
+      "BadRequestError": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "message": "messages parameter is required and must be an array",
+                "type": "invalid_request_error"
+              }
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": {
+                "message": "AI service error",
+                "type": "server_error"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Models",
+      "description": "List and describe the various models available in the API"
+    },
+    {
+      "name": "Chat",
+      "description": "Create chat completions"
+    },
+    {
+      "name": "Completions",
+      "description": "Create text completions (legacy)"
+    }
+  ]
+}
