@@ -5,14 +5,17 @@ A Cloudflare Worker that exposes Cloudflare AI models through an OpenAI-compatib
 ## ✨ Features
 
 - ✅ **OpenAI API-compatible endpoints** (`/v1/chat/completions`, `/v1/models`, `/v1/completions`)
+- ✅ **Interactive documentation** - Full API testing interface with chat functionality
 - ✅ **Static asset hosting** - Landing page and OpenAPI spec served via Cloudflare Assets
-- ✅ **Built-in documentation** - Beautiful interactive documentation at `/`
+- ✅ **Built-in API tester** - Test all endpoints directly from the web interface
+- ✅ **Chat interface** - Interactive chat with streaming support
 - ✅ **OpenAPI specification** - Complete API documentation at `/openapi.json`
 - ✅ **Multi-modal support** - Text generation and image recognition
 - ✅ **Streaming responses** - Real-time response streaming
 - ✅ **Multiple model support** - Primary and backup models with automatic fallback
 - ✅ **CORS support** - Ready for web applications
 - ✅ **Authentication** - API key-based security
+- ✅ **Comprehensive logging** - Debug logging and monitoring
 - ✅ **Health monitoring** - Built-in health check endpoint
 
 ## 📁 Project Structure
@@ -73,10 +76,34 @@ npm run dev
 ```
 Visit http://localhost:8787 to see the documentation
 
+**Interactive Features:**
+- 🧪 **API Tester** - Test all endpoints with your API key
+- 💬 **Chat Interface** - Interactive chat with streaming support
+- 📊 **Real-time Monitoring** - Connection status and response visualization
+- 📋 **Endpoint Explorer** - Test `/v1/models`, `/v1/chat/completions`, and `/v1/completions`
+
 #### Production
 ```bash
 npm run deploy
 ```
+
+### 4. GitHub Setup (Optional)
+
+```bash
+# Install GitHub CLI (if not already installed)
+brew install gh
+
+# Authenticate with GitHub
+gh auth login
+
+# Create and push to GitHub repository
+./setup-github.sh
+```
+
+**Manual GitHub Setup:**
+1. Create a new repository on GitHub
+2. Add the remote: `git remote add origin https://github.com/yourusername/openai-api-worker.git`
+3. Push the code: `git push -u origin main`
 
 ## 🔗 API Endpoints
 

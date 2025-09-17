@@ -11,6 +11,7 @@ node_modules/
 test.sh
 deploy.sh
 logs.sh
+setup-github.sh
 
 # Wrangler
 .wrangler/
