@@ -11,10 +11,16 @@
     "test": "./test.sh",
     "deploy:staging": "wrangler deploy --env staging"
   },
-  "keywords": ["cloudflare", "workers", "openai", "ai", "api"],
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "openai",
+    "ai",
+    "api"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.37.1"
   }
 }

@@ -243,24 +243,33 @@ async function handleChatCompletions(request, env, corsHeaders) {
     debugLog(env, 'Converting messages to Cloudflare format');
     const cfMessages = await convertMessagesToCloudflareFormat(messages, env);
     
-    const aiRequest = {
-      messages: cfMessages,
+    // Determine which model to use
+    const cfModel = mapOpenAIModelToCloudflare(model, env);
+    const modelType = getModelType(cfModel);
+    debugLog(env, `Using Cloudflare model: ${cfModel} (type: ${modelType})`);
+    
+    // Format request based on model type
+    const aiRequest = formatAIRequest(cfMessages, modelType, {
       max_tokens,
       temperature,
       top_p,
       stream
-    };
-
-    // Determine which model to use
-    const cfModel = mapOpenAIModelToCloudflare(model, env);
-    debugLog(env, `Using Cloudflare model: ${cfModel}`);
+    });
+    
+    debugLog(env, 'Formatted AI request', { 
+      modelType, 
+      hasMessages: !!aiRequest.messages, 
+      hasInput: !!aiRequest.input,
+      requestKeys: Object.keys(aiRequest),
+      model: cfModel
+    });
     
     if (stream) {
       debugLog(env, 'Handling streaming response');
-      return await handleStreamingResponse(aiRequest, cfModel, env, corsHeaders, model);
+      return await handleStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
     } else {
       debugLog(env, 'Handling non-streaming response');
-      return await handleNonStreamingResponse(aiRequest, cfModel, env, corsHeaders, model);
+      return await handleNonStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
     }
 
   } catch (error) {
@@ -268,29 +277,42 @@ async function handleChatCompletions(request, env, corsHeaders) {
     
     // Try backup model if primary fails
     const backupModel = env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b';
-    if (model !== backupModel) {
+    if (cfModel !== backupModel) {
       debugLog(env, `Trying backup model: ${backupModel}`);
       try {
         const cfMessages = await convertMessagesToCloudflareFormat(messages, env);
-        const aiRequest = { messages: cfMessages, max_tokens, temperature, top_p, stream };
+        const backupModelType = getModelType(backupModel);
+        const aiRequest = formatAIRequest(cfMessages, backupModelType, {
+          max_tokens,
+          temperature,
+          top_p,
+          stream
+        });
+        
+        debugLog(env, 'Backup model request formatted', { 
+          backupModel, 
+          backupModelType, 
+          requestKeys: Object.keys(aiRequest)
+        });
         
         if (stream) {
-          return await handleStreamingResponse(aiRequest, backupModel, env, corsHeaders, model);
+          return await handleStreamingResponse(aiRequest, backupModel, env, corsHeaders, model, backupModelType);
         } else {
-          return await handleNonStreamingResponse(aiRequest, backupModel, env, corsHeaders, model);
+          return await handleNonStreamingResponse(aiRequest, backupModel, env, corsHeaders, model, backupModelType);
         }
       } catch (backupError) {
         errorLog('Backup model also failed', backupError);
       }
     }
 
-    return new Response(JSON.stringify({ 
-      error: { 
-        message: 'AI service error', 
-        type: 'server_error',
-        details: error.message 
-      }
-    }), {
+    // Provide detailed error information
+    const errorDetails = {
+      message: 'AI service error',
+      type: 'server_error',
+      details: `${error.message} (Model: ${cfModel}, Type: ${modelType})`
+    };
+    
+    return new Response(JSON.stringify({ error: errorDetails }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
@@ -342,20 +364,96 @@ async function convertMessagesToCloudflareFormat(messages, env) {
  */
 function mapOpenAIModelToCloudflare(model, env) {
   const modelMap = {
+    // Map to Llama-4 models (support structured responses)
     'gpt-4': env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
     'gpt-4-turbo': env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
-    'gpt-3.5-turbo': env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b',
     'gpt-4o': env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
-    'gpt-4o-mini': env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b'
+    
+    // Map to simpler models for basic tasks
+    'gpt-3.5-turbo': env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b',
+    'gpt-4o-mini': env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b',
+    
+    // Direct Cloudflare model access
+    'llama4': '@cf/meta/llama-4-scout-17b-16e-instruct',
+    'llama-4': '@cf/meta/llama-4-scout-17b-16e-instruct',
+    'openai-gpt': '@cf/openai/gpt-oss-120b'
   };
   
   return modelMap[model] || model;
 }
 
 /**
+ * Get model type for API request formatting
+ */
+function getModelType(cfModel) {
+  // Llama-4 models support structured responses with messages format
+  if (cfModel.includes('llama-4') || cfModel.includes('llama4')) {
+    return 'llama4';
+  }
+  // Other Llama models use structured message format
+  if (cfModel.includes('llama') || cfModel.includes('meta')) {
+    return 'llama';
+  }
+  // OpenAI models use simple input format
+  if (cfModel.includes('openai') || cfModel.includes('gpt-oss')) {
+    return 'openai';
+  }
+  // Default to input format for unknown models
+  return 'input';
+}
+
+/**
+ * Format AI request based on model type
+ */
+function formatAIRequest(cfMessages, modelType, requestParams) {
+  const { max_tokens, temperature, top_p, stream } = requestParams;
+  
+  switch (modelType) {
+    case 'llama4':
+      // Llama-4 models support structured responses with messages
+      return {
+        messages: cfMessages,
+        max_tokens,
+        temperature,
+        top_p,
+        stream: stream || false
+      };
+      
+    case 'llama':
+      // Regular Llama models use input format with formatted text
+      const llamaInputText = cfMessages.map(msg => 
+        `<|start_header_id|>${msg.role}<|end_header_id|>\n\n${msg.content}<|eot_id|>`
+      ).join('\n');
+      return {
+        input: llamaInputText,
+        max_tokens,
+        temperature
+      };
+      
+    case 'openai':
+      // OpenAI models expect simple input format
+      const openaiInputText = cfMessages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
+      return {
+        input: openaiInputText,
+        max_tokens,
+        temperature
+      };
+      
+    default:
+      // Default to simple input format
+      const defaultInputText = cfMessages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
+      return {
+        input: defaultInputText,
+        max_tokens,
+        temperature
+      };
+  }
+}
+
+/**
  * Handle streaming responses
  */
-async function handleStreamingResponse(aiRequest, model, env, corsHeaders, originalModel) {
+async function handleStreamingResponse(aiRequest, model, env, corsHeaders, originalModel, modelType) {
   debugLog(env, `Starting streaming response with model: ${model}`);
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -365,15 +463,29 @@ async function handleStreamingResponse(aiRequest, model, env, corsHeaders, origi
       debugLog(env, 'Making streaming AI request');
       const response = await env.AI.run(model, aiRequest);
       
-      // Handle streaming from Cloudflare AI
-      if (response && typeof response.then === 'function') {
+      // Extract content based on model response format
+      let content = '';
+      if (modelType === 'llama4' && response.choices && response.choices[0]) {
+        content = response.choices[0].message?.content || response.choices[0].text || response.response || response;
+      } else if (response && typeof response.then === 'function') {
         debugLog(env, 'Processing async AI response');
         const result = await response;
-        const chunk = createOpenAIStreamChunk(result.response || result, originalModel);
-        await writer.write(new TextEncoder().encode(chunk));
+        content = result.response || result.result || result.text || result;
       } else if (response && response.response) {
         debugLog(env, 'Processing synchronous AI response');
-        const chunk = createOpenAIStreamChunk(response.response, originalModel);
+        content = response.response;
+      } else if (response && response.result) {
+        content = response.result;
+      } else if (response && response.text) {
+        content = response.text;
+      } else if (typeof response === 'string') {
+        content = response;
+      } else {
+        content = JSON.stringify(response);
+      }
+      
+      if (content) {
+        const chunk = createOpenAIStreamChunk(content, originalModel);
         await writer.write(new TextEncoder().encode(chunk));
       }
       
@@ -411,14 +523,38 @@ async function handleStreamingResponse(aiRequest, model, env, corsHeaders, origi
 /**
  * Handle non-streaming responses
  */
-async function handleNonStreamingResponse(aiRequest, model, env, corsHeaders, originalModel) {
+async function handleNonStreamingResponse(aiRequest, model, env, corsHeaders, originalModel, modelType) {
   debugLog(env, `Making AI request to model: ${model}`);
   const response = await env.AI.run(model, aiRequest);
   
   debugLog(env, 'AI response received', { 
     hasResponse: !!response.response,
-    responseLength: response.response?.length 
+    responseLength: response.response?.length,
+    responseKeys: Object.keys(response || {}),
+    modelType
   });
+  
+  // Extract content based on model response format
+  let content = '';
+  if (modelType === 'llama4' && response.choices && response.choices[0]) {
+    // Llama-4 may return structured response similar to OpenAI
+    content = response.choices[0].message?.content || response.choices[0].text || response.response || response;
+  } else if (response.response) {
+    // Standard response format
+    content = response.response;
+  } else if (response.result) {
+    // Some models return 'result' instead of 'response'
+    content = response.result;
+  } else if (response.text) {
+    // Some models return 'text'
+    content = response.text;
+  } else if (typeof response === 'string') {
+    // Direct string response
+    content = response;
+  } else {
+    // Fallback - stringify the response
+    content = JSON.stringify(response);
+  }
   
   const openaiResponse = {
     id: `chatcmpl-${generateId()}`,
@@ -429,14 +565,14 @@ async function handleNonStreamingResponse(aiRequest, model, env, corsHeaders, or
       index: 0,
       message: {
         role: 'assistant',
-        content: response.response || response
+        content: content
       },
       finish_reason: 'stop'
     }],
     usage: {
-      prompt_tokens: estimateTokens(aiRequest.messages),
-      completion_tokens: estimateTokens(response.response || response),
-      total_tokens: estimateTokens(aiRequest.messages) + estimateTokens(response.response || response)
+      prompt_tokens: estimateTokens(aiRequest.messages || aiRequest.input),
+      completion_tokens: estimateTokens(content),
+      total_tokens: estimateTokens(aiRequest.messages || aiRequest.input) + estimateTokens(content)
     }
   };
 
@@ -547,15 +683,18 @@ async function handleModels(env, corsHeaders) {
  * Handle /v1/completions endpoint (legacy)
  */
 async function handleCompletions(request, env, corsHeaders) {
+  debugLog(env, 'Handling legacy completions request');
   const body = await request.json();
   const { 
     model = env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct', 
     prompt, 
     max_tokens = 100, 
-    temperature = 0.7 
+    temperature = 0.7,
+    stream = false
   } = body;
   
   if (!prompt) {
+    errorLog('Missing prompt parameter in legacy completions');
     return new Response(JSON.stringify({ 
       error: { 
         message: 'prompt parameter is required',
@@ -567,18 +706,41 @@ async function handleCompletions(request, env, corsHeaders) {
     });
   }
   
-  // Convert to chat format
-  const messages = [{ role: 'user', content: prompt }];
-  const chatRequest = { model, messages, max_tokens, temperature };
-  
-  // Use chat completions logic
-  const mockRequest = new Request(request.url, {
-    method: 'POST',
-    headers: request.headers,
-    body: JSON.stringify(chatRequest)
-  });
-  
-  return await handleChatCompletions(mockRequest, env, corsHeaders);
+  // Convert to chat format and process directly
+  try {
+    const messages = [{ role: 'user', content: prompt }];
+    const cfMessages = await convertMessagesToCloudflareFormat(messages, env);
+    const cfModel = mapOpenAIModelToCloudflare(model, env);
+    const modelType = getModelType(cfModel);
+    
+    debugLog(env, `Legacy completions using model: ${cfModel} (type: ${modelType})`);
+    
+    const aiRequest = formatAIRequest(cfMessages, modelType, {
+      max_tokens,
+      temperature,
+      top_p: 1,
+      stream
+    });
+    
+    if (stream) {
+      return await handleStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
+    } else {
+      return await handleNonStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
+    }
+    
+  } catch (error) {
+    errorLog('Legacy completions error', error);
+    return new Response(JSON.stringify({ 
+      error: { 
+        message: 'AI service error',
+        type: 'server_error',
+        details: error.message 
+      }
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
 }
 
 /**
