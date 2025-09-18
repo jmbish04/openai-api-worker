@@ -750,343 +750,551 @@ print(response.json()['choices'][0]['message']['content'])
     <script>
         let currentEndpoint = null;
         let chatHistory = [];
-        let availableModels = [];
+        let availableModels = []; // full /v1/models response
+        let cloudflareProviders = {}; // provider -> [models]
 
-        // Load available models on page load
+        // Utility: escape HTML for safe insertion
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&"'<>]/g, function (s) {
+                return ({
+                    '&': '&amp;', '"': '&quot;', "'": '&#39;',
+                    '<': '&lt;', '>': '&gt;'
+                })[s];
+            });
+        }
+
+        // Show / hide main sections
+        function showSection(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            const el = document.getElementById(id);
+            if (el) el.classList.add('active');
+            // update nav active state
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => { if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(id)) n.classList.add('active'); });
+        }
+
+        // Copy button for code samples
+        function copyToClipboard(btn) {
+            try {
+                const codeEl = btn.parentElement.querySelector('code');
+                const text = codeEl ? codeEl.textContent : '';
+                navigator.clipboard.writeText(text).then(() => {
+                    const old = btn.textContent;
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.textContent = old, 1200);
+                });
+            } catch (e) {
+                console.error('Copy failed', e);
+            }
+        }
+
+        // on DOM ready
         document.addEventListener('DOMContentLoaded', async function () {
             try {
                 const currentOrigin = location.origin;
-
-                // Replace placeholder in code blocks
-                document.querySelectorAll('.worker-url-placeholder').forEach(el => {
-                    el.textContent = currentOrigin;
-                });
-
-                // Update standalone curl/example block
-                const curlExample = document.getElementById('curl-example');
-                if (curlExample) {
-                    curlExample.textContent = curlExample.textContent.replace(/\[WORKER_URL\]/g, currentOrigin);
-                }
 
                 // Replace placeholders inside code samples
                 document.querySelectorAll('.code-block code').forEach(codeEl => {
                     codeEl.textContent = codeEl.textContent.replace(/\[WORKER_URL\]/g, currentOrigin);
                 });
 
-                // Load models in background (without requiring API key for UI setup)
+                // Wire initial UI events
+                document.getElementById('ai-service').addEventListener('change', onAIServiceChange);
+                document.getElementById('cloudflare-provider-select').addEventListener('change', onCloudflareProviderChange);
+                document.getElementById('global-api-key').addEventListener('change', async () => await loadModelsWithAuth(document.getElementById('global-api-key').value));
+                document.getElementById('chat-api-key').addEventListener('change', onChatApiKeyChange);
+
+                // Chat key: update model selectors when changed
                 await loadAvailableModels();
+                onAIServiceChange();
             } catch (error) {
-                console.log('Could not update worker URL or load models:', error);
+                console.log('Initialization error:', error);
             }
         });
 
+        // Load models without auth (public /v1/models) to populate Cloudflare providers
         async function loadAvailableModels() {
             try {
-                const response = await fetch('/v1/models');
-                if (response.status === 401) {
-                    // Endpoint exists but requires auth
-                    console.log('Models endpoint available, auth required');
+                const res = await fetch('/v1/models');
+                if (!res.ok) {
+                    console.warn('/v1/models returned', res.status);
                     return;
                 }
+                const data = await res.json();
+                availableModels = data.data || data.models || [];
 
-                if (response.ok) {
-                    const data = await response.json();
-                    availableModels = data.data || [];
-                    updateModelSelectors();
-                }
-            } catch (error) {
-                console.log('Models endpoint not available yet:', error);
+                // Derive Cloudflare providers heuristically from model ids
+                cloudflareProviders = {};
+                availableModels.forEach(m => {
+                    const id = m.id || m.name || '';
+                    // look for patterns like '@cf/<provider>/' or '@cf/<provider>' or '/cf-<provider>/'
+                    let providerMatch = null;
+                    if (id.includes('@cf/')) {
+                        const parts = id.split('@cf/')[1].split('/');
+                        providerMatch = parts[0];
+                    } else if (/@cf:/.test(id)) {
+                        providerMatch = id.split('@cf:')[1].split('/')[0];
+                    } else if (id.includes('/@cf/')) {
+                        providerMatch = id.split('/@cf/')[1].split('/')[0];
+                    }
+
+                    if (providerMatch) {
+                        cloudflareProviders[providerMatch] = cloudflareProviders[providerMatch] || [];
+                        cloudflareProviders[providerMatch].push(m);
+                    }
+                });
+
+                // Populate cloudflare provider select
+                const providerSelect = document.getElementById('cloudflare-provider-select');
+                providerSelect.innerHTML = '';
+                const noneOption = document.createElement('option');
+                noneOption.value = '';
+                noneOption.textContent = '(Choose provider)';
+                providerSelect.appendChild(noneOption);
+                Object.keys(cloudflareProviders).forEach(p => {
+                    const o = document.createElement('option');
+                    o.value = p;
+                    o.textContent = p;
+                    providerSelect.appendChild(o);
+                });
+
+                // If there's at least one provider, preselect the first
+                if (!providerSelect.value && providerSelect.options.length > 1) providerSelect.selectedIndex = 1;
+                onCloudflareProviderChange();
+                updateModelSelectors();
+            } catch (err) {
+                console.log('Models endpoint not available yet:', err);
             }
         }
 
+        // Load models via /v1/models using a provided API key (used for OpenAI/Gemini when user supplies their key)
         async function loadModelsWithAuth(apiKey) {
             if (!apiKey) return;
-
             try {
-                const response = await fetch('/v1/models', {
+                const res = await fetch('/v1/models', {
                     headers: {
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': 'Bearer ' + apiKey
+                    }
+                });
+                if (!res.ok) {
+                    console.warn('Authenticated /v1/models returned', res.status);
+                    return;
+                }
+                const data = await res.json();
+                const models = data.data || data.models || [];
+
+                // Heuristics: split models into OpenAI-like and Gemini-like sets
+                const openaiList = [];
+                const geminiList = [];
+                models.forEach(m => {
+                    const id = (m.id || m.name || '').toLowerCase();
+                    const owner = (m.owner || '').toLowerCase();
+                    if (id.includes('gpt') || owner.includes('openai') || id.startsWith('text-') || id.startsWith('oai-')) {
+                        openaiList.push(m);
+                    } else if (id.includes('gemini') || owner.includes('google') || owner.includes('google-research')) {
+                        geminiList.push(m);
+                    } else {
+                        // fallback: if ambiguous, add to both
+                        openaiList.push(m);
+                        geminiList.push(m);
                     }
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    availableModels = data.data || [];
-                    updateModelSelectors();
+                // Populate UI selects
+                const openaiSelect = document.getElementById('openai-model-select');
+                const geminiSelect = document.getElementById('gemini-model-select');
 
-                    // Show models info in UI
-                    showModelsInfo(data);
-                } else {
-                    console.log('Models request failed with status', response.status);
-                }
-            } catch (error) {
-                console.log('Error loading models:', error);
-            }
-        }
-
-        function updateModelSelectors() {
-            const selectors = ['chat-model', 'test-model', 'completion-model'];
-
-            selectors.forEach(selectorId => {
-                const selector = document.getElementById(selectorId);
-                if (selector) {
-                    const currentValue = selector.value;
-                    selector.innerHTML = '';
-
-                    // Add a default option
-                    const defaultOpt = document.createElement('option');
-                    defaultOpt.value = '';
-                    defaultOpt.textContent = 'Select model...';
-                    selector.appendChild(defaultOpt);
-
-                    availableModels.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = m.id;
-                        selector.appendChild(opt);
-                    });
-
-                    if (currentValue) {
-                        try { selector.value = currentValue; } catch (e) { }
-                    }
-                }
-            });
-
-            // New: populate service-specific selectors
-            const openaiSelect = document.getElementById('openai-model-select');
-            const geminiSelect = document.getElementById('gemini-model-select');
-            const cfProviderSelect = document.getElementById('cloudflare-provider-select');
-            const cfModelSelect = document.getElementById('cloudflare-model-select');
-
-            // Derive lists
-            const openaiModels = availableModels.filter(m => (m.owned_by || '').toLowerCase().includes('openai'));
-            const geminiModels = availableModels.filter(m => (m.owned_by || '').toLowerCase().includes('gemini'));
-            const cloudModels = availableModels.filter(m => {
-                const owned = (m.owned_by || '').toLowerCase();
-                return owned.includes('cloudflare') || (m.id && m.id.startsWith('@cf/')) || owned.includes('cloudflare-proxy');
-            });
-
-            // Populate OpenAI models
-            if (openaiSelect) {
                 openaiSelect.innerHTML = '';
-                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select OpenAI model...'; openaiSelect.appendChild(d);
-                openaiModels.forEach(m => {
-                    const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; openaiSelect.appendChild(o);
-                });
-            }
-
-            // Populate Gemini models
-            if (geminiSelect) {
                 geminiSelect.innerHTML = '';
-                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select Gemini model...'; geminiSelect.appendChild(d);
-                geminiModels.forEach(m => {
-                    const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; geminiSelect.appendChild(o);
+
+                openaiList.forEach(m => {
+                    const o = document.createElement('option');
+                    o.value = m.id || m.name;
+                    o.textContent = m.id || m.name;
+                    openaiSelect.appendChild(o);
                 });
-            }
 
-            // Derive providers from cloudModels (look for '@cf/<provider>/...')
-            const providers = [];
-            const providerMap = {};
-            cloudModels.forEach(m => {
-                let providerKey = 'compatibility';
-                if (m.id && m.id.startsWith('@cf/')) {
-                    const parts = m.id.split('/');
-                    providerKey = parts[1] || providerKey;
-                } else if (m.root && m.root.startsWith('@cf/')) {
-                    const parts = m.root.split('/');
-                    providerKey = parts[1] || providerKey;
-                } else if (m.owned_by) {
-                    providerKey = m.owned_by;
-                }
-
-                if (!providers.includes(providerKey)) providers.push(providerKey);
-                providerMap[providerKey] = providerMap[providerKey] || [];
-                providerMap[providerKey].push(m);
-            });
-
-            if (cfProviderSelect) {
-                cfProviderSelect.innerHTML = '';
-                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select provider...'; cfProviderSelect.appendChild(d);
-                providers.forEach(p => {
-                    const o = document.createElement('option'); o.value = p; o.textContent = p; cfProviderSelect.appendChild(o);
+                geminiList.forEach(m => {
+                    const o = document.createElement('option');
+                    o.value = m.id || m.name;
+                    o.textContent = m.id || m.name;
+                    geminiSelect.appendChild(o);
                 });
-            }
 
-            // Populate cloudflare model select based on currently selected provider
-            function populateCfModelsForProvider(selectedProvider) {
-                if (!cfModelSelect) return;
-                cfModelSelect.innerHTML = '';
-                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select Cloudflare model...'; cfModelSelect.appendChild(d);
-                if (!selectedProvider) return;
-                const list = providerMap[selectedProvider] || [];
-                list.forEach(m => {
-                    const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; cfModelSelect.appendChild(o);
-                });
-            }
-
-            const selectedProvider = (cfProviderSelect && cfProviderSelect.value) || null;
-            populateCfModelsForProvider(selectedProvider);
-        }
-
-        function showModelsInfo(data) {
-            const modelCount = data.data ? data.data.length : 0;
-            const coreApiModels = data.data ? data.data.filter(m => (m.owned_by || '').toLowerCase().includes('cloudflare')).length : 0;
-
-            // Update connection status area with models info
-            const statusArea = document.querySelector('#tester .api-tester:first-child');
-            if (statusArea) {
-                let modelsInfo = document.getElementById('models-info');
-                if (!modelsInfo) {
-                    modelsInfo = document.createElement('div');
-                    modelsInfo.id = 'models-info';
-                    statusArea.appendChild(modelsInfo);
-                }
-
-                modelsInfo.innerHTML = `<div class="alert info">Detected ${modelCount} model(s) available${coreApiModels ? ` — ${coreApiModels} owned by Cloudflare` : ''}.</div>`;
-
-                // Add a short list of first 10 models
-                const list = document.createElement('div');
-                list.className = 'json-viewer';
-                list.textContent = (data.data || []).slice(0, 10).map(m => `${m.id} — ${m.description || ''}`).join('\n');
-
-                // Replace existing list if present
-                const existingList = document.getElementById('models-list');
-                if (existingList) existingList.remove();
-                list.id = 'models-list';
-                statusArea.appendChild(list);
-            }
-        }
-
-        function showSection(sectionId) {
-            // Hide all sections
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
-
-            // Remove active class from nav items
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-            });
-
-            // Show selected section
-            const target = document.getElementById(sectionId);
-            if (target) target.classList.add('active');
-
-            // Mark nav item active by matching onclick content
-            const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => {
-                const attr = item.getAttribute('onclick') || '';
-                return attr.includes(`'${sectionId}'`) || attr.includes(`"${sectionId}"`);
-            });
-            if (clickedNav) clickedNav.classList.add('active');
-        }
-
-        function copyToClipboard(button) {
-            try {
-                const codeBlock = button.parentElement;
-                const codeEl = codeBlock.querySelector('code');
-                if (!codeEl) return;
-                const text = codeEl.textContent;
-
-                navigator.clipboard.writeText(text).then(() => {
-                    const original = button.textContent;
-                    button.textContent = 'Copied!';
-                    setTimeout(() => { button.textContent = original; }, 2000);
-                }).catch(err => {
-                    console.error('Copy failed', err);
-                });
-            } catch (e) {
-                console.error('copyToClipboard error', e);
-            }
-        }
-
-        async function testConnection() {
-            const apiKey = document.getElementById('global-api-key').value;
-            const statusIndicator = document.getElementById('connection-status');
-            const statusText = document.getElementById('connection-text');
-
-            // Optimistically show loading
-            statusIndicator.className = 'status-indicator';
-            statusText.textContent = 'Checking...';
-
-            try {
-                const headers = {};
-                if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
-
-                const resp = await fetch('/v1/models', { headers });
-
-                if (resp.ok) {
-                    const data = await resp.json();
-                    statusIndicator.className = 'status-indicator connected';
-                    statusText.textContent = `Connected — ${data.data ? data.data.length : 0} model(s)`;
-                    availableModels = data.data || [];
-                    updateModelSelectors();
-                    showModelsInfo(data);
-                } else if (resp.status === 401) {
-                    statusIndicator.className = 'status-indicator disconnected';
-                    statusText.textContent = 'Auth required — endpoint available';
-                } else {
-                    statusIndicator.className = 'status-indicator disconnected';
-                    statusText.textContent = `Error: ${resp.status}`;
-                }
+                // If current AI service matches, update chat model choices
+                updateModelSelectors();
             } catch (err) {
-                statusIndicator.className = 'status-indicator disconnected';
-                statusText.textContent = 'Connection failed';
-                console.error('testConnection error', err);
+                console.error('Error loading models with auth:', err);
             }
         }
 
-        function clearApiKey() {
-            const el = document.getElementById('global-api-key');
-            if (el) el.value = '';
-            const statusIndicator = document.getElementById('connection-status');
-            const statusText = document.getElementById('connection-text');
-            statusIndicator.className = 'status-indicator disconnected';
-            statusText.textContent = 'Not Connected';
+        // When user picks a cloudflare provider, populate provider-specific models
+        function onCloudflareProviderChange() {
+            const provider = document.getElementById('cloudflare-provider-select').value;
+            const modelSelect = document.getElementById('cloudflare-model-select');
+            modelSelect.innerHTML = '';
+            if (!provider) return;
+            const list = cloudflareProviders[provider] || [];
+            list.forEach(m => {
+                const o = document.createElement('option');
+                o.value = m.id || m.name;
+                o.textContent = m.id || m.name;
+                modelSelect.appendChild(o);
+            });
+            updateModelSelectors();
         }
 
-        async function onChatApiKeyChange() {
-            const key = document.getElementById('chat-api-key').value;
-            if (!key) return;
-            await loadModelsWithAuth(key);
-        }
-
+        // When AI service changes, show/hide controls and update chat model selector
         function onAIServiceChange() {
             const svc = document.getElementById('ai-service').value;
             document.getElementById('openai-controls').style.display = svc === 'openai' ? 'block' : 'none';
             document.getElementById('gemini-controls').style.display = svc === 'gemini' ? 'block' : 'none';
             document.getElementById('cloudflare-controls').style.display = svc === 'cloudflare' ? 'block' : 'none';
             document.getElementById('cloudflare-model-controls').style.display = svc === 'cloudflare' ? 'block' : 'none';
+
+            // If user selected OpenAI or Gemini but we don't yet have their models loaded, attempt to load using global key
+            const globalKey = document.getElementById('global-api-key').value;
+            const chatKey = document.getElementById('chat-api-key').value;
+            if ((svc === 'openai' || svc === 'gemini') && (globalKey || chatKey)) {
+                loadModelsWithAuth(globalKey || chatKey);
+            }
+
+            updateModelSelectors();
         }
 
-        function onCloudflareProviderChange() {
-            const provider = document.getElementById('cloudflare-provider-select').value;
-            const cfModelSelect = document.getElementById('cloudflare-model-select');
-            if (!cfModelSelect) return;
+        // Map UI model controls into the single chat-model selector used in the chat UI
+        function updateModelSelectors() {
+            const svc = document.getElementById('ai-service').value;
+            const chatModelSelect = document.getElementById('chat-model');
+            chatModelSelect.innerHTML = '';
 
-            // Rebuild provider map from availableModels (same logic as updateModelSelectors)
-            const cloudModels = availableModels.filter(m => {
-                const owned = (m.owned_by || '').toLowerCase();
-                return owned.includes('cloudflare') || (m.id && m.id.startsWith('@cf/')) || owned.includes('cloudflare-proxy');
-            });
-
-            const list = cloudModels.filter(m => {
-                if (m.id && m.id.startsWith('@cf/')) {
-                    const parts = m.id.split('/');
-                    return parts[1] === provider;
+            if (svc === 'cloudflare') {
+                // prefer currently selected cloudflare-model-select options
+                const cfSelect = document.getElementById('cloudflare-model-select');
+                if (cfSelect && cfSelect.options.length) {
+                    Array.from(cfSelect.options).forEach(opt => {
+                        const o = document.createElement('option');
+                        o.value = opt.value;
+                        o.textContent = opt.textContent;
+                        chatModelSelect.appendChild(o);
+                    });
+                } else {
+                    // fallback: include core availableModels
+                    availableModels.forEach(m => {
+                        const o = document.createElement('option');
+                        o.value = m.id || m.name;
+                        o.textContent = m.id || m.name;
+                        chatModelSelect.appendChild(o);
+                    });
                 }
-                if (m.root && m.root.startsWith('@cf/')) {
-                    const parts = m.root.split('/');
-                    return parts[1] === provider;
+            } else if (svc === 'openai') {
+                const openaiSelect = document.getElementById('openai-model-select');
+                if (openaiSelect && openaiSelect.options.length) {
+                    Array.from(openaiSelect.options).forEach(opt => chatModelSelect.appendChild(opt.cloneNode(true)));
                 }
-                return (m.owned_by || '') === provider;
-            });
+            } else if (svc === 'gemini') {
+                const geminiSelect = document.getElementById('gemini-model-select');
+                if (geminiSelect && geminiSelect.options.length) {
+                    Array.from(geminiSelect.options).forEach(opt => chatModelSelect.appendChild(opt.cloneNode(true)));
+                }
+            }
 
-            cfModelSelect.innerHTML = '';
-            const d = document.createElement('option'); d.value = ''; d.textContent = 'Select Cloudflare model...'; cfModelSelect.appendChild(d);
-            list.forEach(m => {
-                const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; cfModelSelect.appendChild(o);
-            });
+            // If still empty, populate some sensible fallback options
+            if (!chatModelSelect.options.length) {
+                ['gpt-4', 'gpt-4o', 'gpt-3.5-turbo'].forEach(id => {
+                    const o = document.createElement('option'); o.value = id; o.textContent = id; chatModelSelect.appendChild(o);
+                });
+            }
         }
+
+        // Test connection button: attempt to call /v1/models with provided key
+        async function testConnection() {
+            const key = document.getElementById('global-api-key').value;
+            if (!key) {
+                alert('Enter your API key first');
+                return;
+            }
+            try {
+                const res = await fetch('/v1/models', { headers: { 'Authorization': 'Bearer ' + key } });
+                const statusIndicator = document.getElementById('connection-status');
+                const statusText = document.getElementById('connection-text');
+                if (res.ok) {
+                    statusIndicator.classList.remove('disconnected');
+                    statusIndicator.classList.add('connected');
+                    statusText.textContent = 'Connected';
+                    await loadModelsWithAuth(key);
+                } else {
+                    statusIndicator.classList.remove('connected');
+                    statusIndicator.classList.add('disconnected');
+                    statusText.textContent = 'Not Connected (' + res.status + ')';
+                }
+            } catch (err) {
+                console.error('Connection test error', err);
+                alert('Connection test failed: ' + err.message);
+            }
+        }
+
+        function clearApiKey() {
+            document.getElementById('global-api-key').value = '';
+            document.getElementById('connection-text').textContent = 'Not Connected';
+            document.getElementById('connection-status').classList.remove('connected');
+            document.getElementById('connection-status').classList.add('disconnected');
+        }
+
+        function onChatApiKeyChange() {
+            // If user enters a chat-specific key, attempt to load OpenAI/Gemini models using it
+            const key = document.getElementById('chat-api-key').value;
+            if (key) loadModelsWithAuth(key);
+        }
+
+        function handleChatKeyPress(e) {
+            if ((e.key === 'Enter' && !e.shiftKey)) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        function clearChat() {
+            chatHistory = [];
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+        }
+
+        // Robust streaming-aware chat sender
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const userText = input.value.trim();
+            if (!userText) return;
+
+            const chatKey = document.getElementById('chat-api-key').value || document.getElementById('global-api-key').value;
+            const aiService = document.getElementById('ai-service').value;
+            const streamEnabled = document.getElementById('stream-chat').checked;
+
+            // Determine model selection according to service
+            let model = document.getElementById('chat-model').value;
+            if (aiService === 'cloudflare') {
+                // if chat-model empty, fallback to cloudflare-model-select
+                model = model || document.getElementById('cloudflare-model-select').value;
+            }
+
+            // Append user message to UI
+            const container = document.getElementById('chat-messages');
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user';
+            userMsg.innerHTML = '<div class="role">User</div><div>' + escapeHtml(userText) + '</div>';
+            container.appendChild(userMsg);
+            container.scrollTop = container.scrollHeight;
+            input.value = '';
+
+            // Prepare request body for chat completions (OpenAI-style)
+            const body = {
+                model: model,
+                messages: [
+                    ...chatHistory,
+                    { role: 'user', content: userText }
+                ],
+                stream: streamEnabled
+            };
+
+            const headers = { 'Content-Type': 'application/json' };
+            if (chatKey) headers['Authorization'] = 'Bearer ' + chatKey;
+
+            try {
+                const res = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    const errEl = document.createElement('div');
+                    errEl.className = 'alert error';
+                    errEl.textContent = 'Error: ' + res.status + ' - ' + errText;
+                    container.appendChild(errEl);
+                    container.scrollTop = container.scrollHeight;
+                    return;
+                }
+
+                if (streamEnabled && res.body) {
+                    // Create assistant message block that we will stream into
+                    const assistantMsg = document.createElement('div');
+                    assistantMsg.className = 'message assistant';
+                    assistantMsg.innerHTML = '<div class="role">Assistant</div><div class="streaming-content"></div>';
+                    container.appendChild(assistantMsg);
+                    container.scrollTop = container.scrollHeight;
+
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    let finalText = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+
+                        // Split on newlines to handle 'data: {...}' chunks
+                        const lines = buffer.split(/\n/);
+                        // Keep last partial line in buffer
+                        buffer = lines.pop() || '';
+
+                        for (let line of lines) {
+                            line = line.trim();
+                            if (!line) continue;
+                            // common SSE style: 'data: {...}' or 'data: [DONE]'
+                            if (line.startsWith('data:')) {
+                                const payload = line.replace(/^data:\s*/, '');
+                                if (payload === '[DONE]') {
+                                    // stream finished
+                                    buffer = '';
+                                    break;
+                                }
+                                try {
+                                    const parsed = JSON.parse(payload);
+                                    const delta = (parsed.choices && parsed.choices[0]) || parsed;
+                                    // Try several possible fields for content
+                                    const part = (delta.delta && delta.delta.content) || (delta.delta && delta.delta.text) || delta.text || (delta.message && delta.message.content) || delta.choices?.[0]?.text;
+                                    if (part) {
+                                        finalText += part;
+                                        assistantMsg.querySelector('.streaming-content').innerHTML = escapeHtml(finalText);
+                                        container.scrollTop = container.scrollHeight;
+                                    }
+                                } catch (e) {
+                                    // not JSON, append raw
+                                    finalText += payload + '\n';
+                                    assistantMsg.querySelector('.streaming-content').innerHTML = escapeHtml(finalText);
+                                }
+                            } else {
+                                // fallback: treat line as raw JSON or plain text
+                                try {
+                                    const parsed = JSON.parse(line);
+                                    const text = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text || parsed.message?.content || '';
+                                    finalText += text;
+                                    assistantMsg.querySelector('.streaming-content').innerHTML = escapeHtml(finalText);
+                                } catch (e) {
+                                    finalText += line + '\n';
+                                    assistantMsg.querySelector('.streaming-content').innerHTML = escapeHtml(finalText);
+                                }
+                            }
+                        }
+                    }
+
+                    // Finalize message
+                    chatHistory.push({ role: 'user', content: userText });
+                    chatHistory.push({ role: 'assistant', content: finalText });
+                } else {
+                    // Non-streaming response: parse JSON normally
+                    const json = await res.json();
+                    const text = extractTextFromResponseObject(json);
+                    const assistantMsg = document.createElement('div');
+                    assistantMsg.className = 'message assistant';
+                    assistantMsg.innerHTML = '<div class="role">Assistant</div><div>' + escapeHtml(text) + '</div>';
+                    container.appendChild(assistantMsg);
+                    container.scrollTop = container.scrollHeight;
+
+                    chatHistory.push({ role: 'user', content: userText });
+                    chatHistory.push({ role: 'assistant', content: text });
+                }
+            } catch (err) {
+                console.error('Chat request failed', err);
+                const errEl = document.createElement('div');
+                errEl.className = 'alert error';
+                errEl.textContent = 'Request failed: ' + err.message;
+                container.appendChild(errEl);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // Try to extract assistant text from typical OpenAI/Gemini /v1/chat/completions JSON
+        function extractTextFromResponseObject(obj) {
+            try {
+                if (!obj) return '';
+                if (obj.choices && obj.choices[0]) {
+                    const choice = obj.choices[0];
+                    if (choice.message && choice.message.content) return choice.message.content;
+                    if (choice.text) return choice.text;
+                    if (choice.delta && (choice.delta.content || choice.delta.text)) return choice.delta.content || choice.delta.text;
+                }
+                if (obj.output && Array.isArray(obj.output)) {
+                    // Gemini-style
+                    return obj.output.map(o => o.content?.map(c => c.text).join('') || '').join('\n');
+                }
+                return JSON.stringify(obj);
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // Endpoint selector for tester panel (existing UI hook)
+        function selectEndpoint(name) {
+            currentEndpoint = name;
+            const holder = document.getElementById('endpoint-form');
+            const responseArea = document.getElementById('endpoint-response');
+            document.getElementById('endpoint-title').textContent = 'Test: ' + name;
+            responseArea.innerHTML = '';
+            holder.innerHTML = '';
+
+            if (name === 'models') {
+                holder.innerHTML = '<div class="form-group full-width"><label>API Key (optional)</label><input id="test-models-key" placeholder="Bearer key for provider-specific models"></div><button class="btn" onclick="runTestModels()">Run</button>';
+            } else if (name === 'chat') {
+                holder.innerHTML = '<div class="form-group"><label>API Key (optional)</label><input id="test-chat-key" placeholder="Bearer key"></div><div class="form-group full-width"><label>Model</label><input id="test-chat-model" placeholder="gpt-4"></div><div class="form-group full-width"><label>Messages (JSON array)</label><textarea id="test-chat-messages">[ { "role": "user", "content": "Hello" } ]</textarea></div><button class="btn" onclick="runTestChat()">Run</button>';
+            } else if (name === 'completions') {
+                holder.innerHTML = '<div class="form-group"><label>API Key (optional)</label><input id="test-comp-key" placeholder="Bearer key"></div><div class="form-group full-width"><label>Model</label><input id="test-comp-model" placeholder="gpt-4"></div><div class="form-group full-width"><label>Prompt</label><textarea id="test-comp-prompt">Hello</textarea></div><button class="btn" onclick="runTestCompletions()">Run</button>';
+            }
+            document.getElementById('endpoint-tester').style.display = 'block';
+        }
+
+        async function runTestModels() {
+            const key = document.getElementById('test-models-key').value;
+            const headers = key ? { 'Authorization': 'Bearer ' + key } : {};
+            const res = await fetch('/v1/models', { headers });
+            const text = await res.text();
+            document.getElementById('endpoint-response').innerHTML = '<pre class="json-viewer">' + escapeHtml(text) + '</pre>';
+        }
+
+        async function runTestChat() {
+            try {
+                const key = document.getElementById('test-chat-key').value;
+                const model = document.getElementById('test-chat-model').value || 'gpt-4';
+                const messages = JSON.parse(document.getElementById('test-chat-messages').value || '[]');
+                const headers = { 'Content-Type': 'application/json' };
+                if (key) headers['Authorization'] = 'Bearer ' + key;
+                const res = await fetch('/v1/chat/completions', { method: 'POST', headers, body: JSON.stringify({ model, messages }) });
+                const text = await res.text();
+                document.getElementById('endpoint-response').innerHTML = '<pre class="json-viewer">' + escapeHtml(text) + '</pre>';
+            } catch (e) {
+                document.getElementById('endpoint-response').innerHTML = '<div class="alert error">' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        async function runTestCompletions() {
+            try {
+                const key = document.getElementById('test-comp-key').value;
+                const model = document.getElementById('test-comp-model').value || 'gpt-4';
+                const prompt = document.getElementById('test-comp-prompt').value || '';
+                const headers = { 'Content-Type': 'application/json' };
+                if (key) headers['Authorization'] = 'Bearer ' + key;
+                const res = await fetch('/v1/completions', { method: 'POST', headers, body: JSON.stringify({ model, prompt }) });
+                const text = await res.text();
+                document.getElementById('endpoint-response').innerHTML = '<pre class="json-viewer">' + escapeHtml(text) + '</pre>';
+            } catch (e) {
+                document.getElementById('endpoint-response').innerHTML = '<div class="alert error">' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        // expose a couple helpers to global scope for inline onclick usage
+        window.selectEndpoint = selectEndpoint;
+        window.copyToClipboard = copyToClipboard;
+        window.testConnection = testConnection;
+        window.clearApiKey = clearApiKey;
+        window.runTestModels = runTestModels;
+        window.runTestChat = runTestChat;
+        window.runTestCompletions = runTestCompletions;
+        window.sendChatMessage = sendChatMessage;
+        window.showSection = showSection;
+        window.clearChat = clearChat;
     </script>
 </body>
 

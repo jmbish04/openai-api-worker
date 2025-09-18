@@ -130,7 +130,7 @@ export default {
         return await handleChatCompletions(request, env, corsHeaders);
       } else if (path === '/v1/models') {
         debugLog(env, 'Handling models list request');
-        return await handleModels(env, corsHeaders);
+        return await handleModelsRequest(request, env);
       } else if (path === '/v1/completions') {
         debugLog(env, 'Handling legacy completions request');
         return await handleCompletions(request, env, corsHeaders);
@@ -609,271 +609,72 @@ function createOpenAIStreamChunk(content, model) {
 /**
  * Handle /v1/models endpoint
  */
-async function handleModels(env, corsHeaders) {
+async function handleModelsRequest(_req, env) {
+  // existing logic to get core list
+  let coreList = [];
   try {
-    // Try to fetch models from core API first
-    debugLog(env, 'Fetching models from core API');
-
-    if (env.CORE_API && env.CORE_WORKER_API_KEY) {
-      try {
-        const coreApiResponse = await env.CORE_API.fetch('/ai/models/search', {
-          method: 'GET',
-          headers: {
-            'X-Auth-Key': env.CORE_WORKER_API_KEY,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (coreApiResponse.ok) {
-          const coreModels = await coreApiResponse.json();
-          debugLog(env, `Fetched ${coreModels.length} models from core API`);
-
-          // Transform core API models to OpenAI format
-          const openaiModels = coreModels.map((model, index) => ({
-            id: model.name || model.id || `model-${index}`,
-            object: 'model',
-            created: Math.floor(Date.now() / 1000),
-            owned_by: 'cloudflare',
-            permission: [],
-            root: model.name || model.id || `model-${index}`,
-            parent: null,
-            description: model.description || 'Cloudflare Workers AI model'
-          }));
-
-          // Add our predefined OpenAI-compatible model mappings
-          const compatibilityModels = [
-            {
-              id: 'gpt-4',
-              object: 'model',
-              created: 1677610602,
-              owned_by: 'cloudflare-proxy',
-              permission: [],
-              root: 'gpt-4',
-              parent: null,
-              description: 'GPT-4 compatible via Cloudflare Workers AI'
-            },
-            {
-              id: 'gpt-4-turbo',
-              object: 'model',
-              created: 1677610602,
-              owned_by: 'cloudflare-proxy',
-              permission: [],
-              root: 'gpt-4-turbo',
-              parent: null,
-              description: 'GPT-4 Turbo compatible via Cloudflare Workers AI'
-            },
-            {
-              id: 'gpt-4o',
-              object: 'model',
-              created: 1677610602,
-              owned_by: 'cloudflare-proxy',
-              permission: [],
-              root: 'gpt-4o',
-              parent: null,
-              description: 'GPT-4o compatible via Cloudflare Workers AI'
-            },
-            {
-              id: 'gpt-4o-mini',
-              object: 'model',
-              created: 1677610602,
-              owned_by: 'cloudflare-proxy',
-              permission: [],
-              root: 'gpt-4o-mini',
-              parent: null,
-              description: 'GPT-4o Mini compatible via Cloudflare Workers AI'
-            },
-            {
-              id: 'gpt-3.5-turbo',
-              object: 'model',
-              created: 1677610602,
-              owned_by: 'cloudflare-proxy',
-              permission: [],
-              root: 'gpt-3.5-turbo',
-              parent: null,
-              description: 'GPT-3.5 Turbo compatible via Cloudflare Workers AI'
-            }
-          ];
-
-          // Combine core API models with compatibility models
-          const allModels = [...openaiModels, ...compatibilityModels];
-
-          // Additionally attempt to augment models list with OpenAI and Gemini when API keys are present
-          const remoteModels = await fetchRemoteModelLists(env);
-          const merged = mergeModelLists(allModels, remoteModels);
-
-          return new Response(JSON.stringify({ object: 'list', data: merged }), {
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        } else {
-          debugLog(env, `Core API request failed with status: ${coreApiResponse.status}`);
-        }
-      } catch (coreApiError) {
-        errorLog('Core API request failed', coreApiError);
-      }
-    } else {
-      debugLog(env, 'Core API binding or key not available, using fallback models');
+    const resp = await fetch(`${env.CORE_API}/v1/models`, { headers: { 'Authorization': `Bearer ${env.CORE_WORKER_API_KEY}` } });
+    if (resp.ok) {
+      const json = await resp.json();
+      coreList = (json.data || []).map(m => ({ id: m.id, object: m.object || 'model', owner: m.owner || 'core' }));
     }
-  } catch (error) {
-    errorLog('Error in handleModels', error);
+  } catch (_e) {
+    // ignore
   }
 
-  // Fallback to static model list if core API is unavailable
-  debugLog(env, 'Using fallback static model list');
-  const models = [
-    {
-      id: '@cf/meta/llama-4-scout-17b-16e-instruct',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare',
-      permission: [],
-      root: '@cf/meta/llama-4-scout-17b-16e-instruct',
-      parent: null,
-      description: 'Llama 4 Scout 17B model with structured response support'
-    },
-    {
-      id: '@cf/openai/gpt-oss-120b',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare',
-      permission: [],
-      root: '@cf/openai/gpt-oss-120b',
-      parent: null,
-      description: 'OpenAI GPT OSS 120B model'
-    },
-    // OpenAI compatible model names
-    {
-      id: 'gpt-4',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare-proxy',
-      permission: [],
-      root: 'gpt-4',
-      parent: null,
-      description: 'GPT-4 compatible via Cloudflare Workers AI'
-    },
-    {
-      id: 'gpt-4-turbo',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare-proxy',
-      permission: [],
-      root: 'gpt-4-turbo',
-      parent: null,
-      description: 'GPT-4 Turbo compatible via Cloudflare Workers AI'
-    },
-    {
-      id: 'gpt-4o',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare-proxy',
-      permission: [],
-      root: 'gpt-4o',
-      parent: null,
-      description: 'GPT-4o compatible via Cloudflare Workers AI'
-    },
-    {
-      id: 'gpt-4o-mini',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare-proxy',
-      permission: [],
-      root: 'gpt-4o-mini',
-      parent: null,
-      description: 'GPT-4o Mini compatible via Cloudflare Workers AI'
-    },
-    {
-      id: 'gpt-3.5-turbo',
-      object: 'model',
-      created: 1677610602,
-      owned_by: 'cloudflare-proxy',
-      permission: [],
-      root: 'gpt-3.5-turbo',
-      parent: null,
-      description: 'GPT-3.5 Turbo compatible via Cloudflare Workers AI'
-    }
+  // Add compatibility entries (gpt-4, gpt-3.5-turbo) preserved from prior behavior
+  const compatibility = [
+    { id: 'gpt-4', object: 'model', owner: 'compat' },
+    { id: 'gpt-4o', object: 'model', owner: 'compat' },
+    { id: 'gpt-3.5-turbo', object: 'model', owner: 'compat' }
   ];
 
-  // Try to augment fallback with remote model lists (OpenAI / Gemini) when keys are available
-  try {
-    const remoteModels = await fetchRemoteModelLists(env);
-    const merged = mergeModelLists(models, remoteModels);
-    return new Response(JSON.stringify({ object: 'list', data: merged }), {
-      headers: { 'Content-Type': 'application/json', ...corsHeaders }
-    });
-  } catch (err) {
-    debugLog(env, 'Unable to augment fallback models with remote providers', err);
-  }
+  // Fetch remote provider model lists
+  const remotes = await fetchRemoteModelLists(env);
+  let merged = mergeModelLists(coreList, compatibility);
+  merged = mergeModelLists(merged, remotes.openai);
+  merged = mergeModelLists(merged, remotes.gemini);
 
-  return new Response(JSON.stringify({ object: 'list', data: models }), {
-    headers: { 'Content-Type': 'application/json', ...corsHeaders }
-  });
+  return new Response(JSON.stringify({ data: merged }), { headers: { 'Content-Type': 'application/json' } });
 }
 
 /**
  * Fetch model lists from remote providers (OpenAI and Gemini) when keys are present
  */
 async function fetchRemoteModelLists(env) {
-  const results = [];
-
-  // 1) OpenAI
+  const results = { openai: [], gemini: [] };
+  // Fetch OpenAI models if key present
   if (env.OPENAI_API_KEY) {
     try {
-      debugLog(env, 'Fetching models from OpenAI');
-      const resp = await fetch('https://api.openai.com/v1/models', {
+      const r = await fetch('https://api.openai.com/v1/models', {
         headers: { 'Authorization': `Bearer ${env.OPENAI_API_KEY}` }
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (Array.isArray(data.data)) {
-          const mapped = data.data.map(m => ({
-            id: m.id,
-            object: 'model',
-            created: Math.floor(Date.now() / 1000),
-            owned_by: m.owned_by || 'openai',
-            permission: [],
-            root: m.id,
-            parent: m.parent || null,
-            description: m.description || ''
-          }));
-          results.push(...mapped);
+      if (r.ok) {
+        const j = await r.json();
+        if (Array.isArray(j.data)) {
+          results.openai = j.data.map(m => ({ id: m.id || m.name, object: m.object || 'model', owner: m.owned_by || m.owner || 'openai' }));
         }
-      } else {
-        debugLog(env, `OpenAI models fetch failed: ${resp.status}`);
       }
     } catch (e) {
-      errorLog('OpenAI models fetch error', e);
+      // swallow - best-effort
+      console.warn('OpenAI models fetch failed', e);
     }
   }
 
-  // 2) Gemini / Google Generative API
+  // Fetch Gemini models if key present
   if (env.GEMINI_API_KEY) {
     try {
-      debugLog(env, 'Fetching models from Gemini (Google Generative API)');
-      // Use API key as query param (common for Google API keys)
-      const geminiUrl = `https://generative.googleapis.com/v1/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
-      const resp = await fetch(geminiUrl);
-      if (resp.ok) {
-        const data = await resp.json();
-        // Google's Generative API returns models under 'models' or similar; try both
-        const geminiModels = data.models || data.model || data || [];
-        if (Array.isArray(geminiModels)) {
-          const mapped = geminiModels.map((m, idx) => ({
-            id: m.name || m.model || `gemini-model-${idx}`,
-            object: 'model',
-            created: Math.floor(Date.now() / 1000),
-            owned_by: 'gemini',
-            permission: [],
-            root: m.name || m.model || `gemini-model-${idx}`,
-            parent: null,
-            description: m.description || m.displayName || ''
-          }));
-          results.push(...mapped);
+      // Google Generative API: listModels endpoint
+      const url = `https://generativelanguage.googleapis.com/v1beta2/models?key=${env.GEMINI_API_KEY}`;
+      const r = await fetch(url);
+      if (r.ok) {
+        const j = await r.json();
+        if (Array.isArray(j.models)) {
+          results.gemini = j.models.map(m => ({ id: m.name || m.model || m.id, object: 'model', owner: 'google' }));
         }
-      } else {
-        debugLog(env, `Gemini models fetch failed: ${resp.status}`);
       }
     } catch (e) {
-      errorLog('Gemini models fetch error', e);
+      console.warn('Gemini models fetch failed', e);
     }
   }
 
@@ -883,26 +684,24 @@ async function fetchRemoteModelLists(env) {
 /**
  * Merge and deduplicate model lists by id, preserving order (primary list first)
  */
-function mergeModelLists(primary = [], additions = []) {
+function mergeModelLists(primary, additions) {
   const seen = new Set();
-  const merged = [];
-
-  for (const m of primary) {
-    if (!seen.has(m.id)) {
-      merged.push(m);
-      seen.add(m.id);
+  const out = [];
+  for (const m of primary || []) {
+    const id = (m.id || m.name || '').toString();
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      out.push(m);
     }
   }
-
-  for (const m of additions) {
-    if (!m || !m.id) continue;
-    if (!seen.has(m.id)) {
-      merged.push(m);
-      seen.add(m.id);
+  for (const m of additions || []) {
+    const id = (m.id || m.name || '').toString();
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      out.push(m);
     }
   }
-
-  return merged;
+  return out;
 }
 
 /**
