@@ -607,6 +607,111 @@ function createOpenAIStreamChunk(content, model) {
  * Handle /v1/models endpoint
  */
 async function handleModels(env, corsHeaders) {
+  try {
+    // Try to fetch models from core API first
+    debugLog(env, 'Fetching models from core API');
+    
+    if (env.CORE_API && env.CORE_WORKER_API_KEY) {
+      try {
+        const coreApiResponse = await env.CORE_API.fetch('/ai/models/search', {
+          method: 'GET',
+          headers: {
+            'X-Auth-Key': env.CORE_WORKER_API_KEY,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (coreApiResponse.ok) {
+          const coreModels = await coreApiResponse.json();
+          debugLog(env, `Fetched ${coreModels.length} models from core API`);
+          
+          // Transform core API models to OpenAI format
+          const openaiModels = coreModels.map((model, index) => ({
+            id: model.name || model.id || `model-${index}`,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: 'cloudflare',
+            permission: [],
+            root: model.name || model.id || `model-${index}`,
+            parent: null,
+            description: model.description || 'Cloudflare Workers AI model'
+          }));
+          
+          // Add our predefined OpenAI-compatible model mappings
+          const compatibilityModels = [
+            {
+              id: 'gpt-4',
+              object: 'model',
+              created: 1677610602,
+              owned_by: 'cloudflare-proxy',
+              permission: [],
+              root: 'gpt-4',
+              parent: null,
+              description: 'GPT-4 compatible via Cloudflare Workers AI'
+            },
+            {
+              id: 'gpt-4-turbo',
+              object: 'model',
+              created: 1677610602,
+              owned_by: 'cloudflare-proxy',
+              permission: [],
+              root: 'gpt-4-turbo',
+              parent: null,
+              description: 'GPT-4 Turbo compatible via Cloudflare Workers AI'
+            },
+            {
+              id: 'gpt-4o',
+              object: 'model',
+              created: 1677610602,
+              owned_by: 'cloudflare-proxy',
+              permission: [],
+              root: 'gpt-4o',
+              parent: null,
+              description: 'GPT-4o compatible via Cloudflare Workers AI'
+            },
+            {
+              id: 'gpt-4o-mini',
+              object: 'model',
+              created: 1677610602,
+              owned_by: 'cloudflare-proxy',
+              permission: [],
+              root: 'gpt-4o-mini',
+              parent: null,
+              description: 'GPT-4o Mini compatible via Cloudflare Workers AI'
+            },
+            {
+              id: 'gpt-3.5-turbo',
+              object: 'model',
+              created: 1677610602,
+              owned_by: 'cloudflare-proxy',
+              permission: [],
+              root: 'gpt-3.5-turbo',
+              parent: null,
+              description: 'GPT-3.5 Turbo compatible via Cloudflare Workers AI'
+            }
+          ];
+          
+          // Combine core API models with compatibility models
+          const allModels = [...openaiModels, ...compatibilityModels];
+          
+          return new Response(JSON.stringify({ object: 'list', data: allModels }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        } else {
+          debugLog(env, `Core API request failed with status: ${coreApiResponse.status}`);
+        }
+      } catch (coreApiError) {
+        errorLog('Core API request failed', coreApiError);
+      }
+    } else {
+      debugLog(env, 'Core API binding or key not available, using fallback models');
+    }
+  } catch (error) {
+    errorLog('Error in handleModels', error);
+  }
+  
+  // Fallback to static model list if core API is unavailable
+  debugLog(env, 'Using fallback static model list');
   const models = [
     {
       id: '@cf/meta/llama-4-scout-17b-16e-instruct',
@@ -615,7 +720,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare',
       permission: [],
       root: '@cf/meta/llama-4-scout-17b-16e-instruct',
-      parent: null
+      parent: null,
+      description: 'Llama 4 Scout 17B model with structured response support'
     },
     {
       id: '@cf/openai/gpt-oss-120b',
@@ -624,7 +730,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare',
       permission: [],
       root: '@cf/openai/gpt-oss-120b',
-      parent: null
+      parent: null,
+      description: 'OpenAI GPT OSS 120B model'
     },
     // OpenAI compatible model names
     {
@@ -634,7 +741,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare-proxy',
       permission: [],
       root: 'gpt-4',
-      parent: null
+      parent: null,
+      description: 'GPT-4 compatible via Cloudflare Workers AI'
     },
     {
       id: 'gpt-4-turbo',
@@ -643,7 +751,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare-proxy',
       permission: [],
       root: 'gpt-4-turbo',
-      parent: null
+      parent: null,
+      description: 'GPT-4 Turbo compatible via Cloudflare Workers AI'
     },
     {
       id: 'gpt-4o',
@@ -652,7 +761,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare-proxy',
       permission: [],
       root: 'gpt-4o',
-      parent: null
+      parent: null,
+      description: 'GPT-4o compatible via Cloudflare Workers AI'
     },
     {
       id: 'gpt-4o-mini',
@@ -661,7 +771,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare-proxy',
       permission: [],
       root: 'gpt-4o-mini',
-      parent: null
+      parent: null,
+      description: 'GPT-4o Mini compatible via Cloudflare Workers AI'
     },
     {
       id: 'gpt-3.5-turbo',
@@ -670,7 +781,8 @@ async function handleModels(env, corsHeaders) {
       owned_by: 'cloudflare-proxy',
       permission: [],
       root: 'gpt-3.5-turbo',
-      parent: null
+      parent: null,
+      description: 'GPT-3.5 Turbo compatible via Cloudflare Workers AI'
     }
   ];
 

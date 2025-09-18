@@ -65,7 +65,10 @@ npm run deploy
 ./deploy.sh
 
 # Set the worker API key as a secret (first time only)
-wrangler secret put WORKER_API_KEY
+pnpm wrangler secret put WORKER_API_KEY
+
+# Set the core API key for service binding (first time only)
+pnpm wrangler secret put CORE_WORKER_API_KEY
 ```
 
 ### 3. Deploy
@@ -248,6 +251,40 @@ You can also use Cloudflare model names directly.
 - `DEFAULT_MODEL`: Primary model to use (default: `@cf/meta/llama-4-scout-17b-16e-instruct`)
 - `BACKUP_MODEL`: Fallback model (default: `@cf/openai/gpt-oss-120b`)
 - `WORKER_API_KEY`: Custom API key for authentication (set as secret)
+- `CORE_WORKER_API_KEY`: API key for the core-api worker service binding (set as secret)
+
+### Service Binding to Core API
+
+This worker includes a service binding to the `core-api` worker to dynamically fetch available AI models. The `/v1/models` endpoint will:
+
+1. **Primary**: Fetch models from the core API (`/ai/models/search`)
+2. **Fallback**: Use static model list if core API is unavailable
+
+#### Setup Service Binding
+
+1. **Configure wrangler.toml** (already done):
+   ```toml
+   [[services]]
+   binding = "CORE_API"
+   service = "core-api"
+   environment = "production"
+   ```
+
+2. **Set the Core API Key**:
+   ```bash
+   pnpm wrangler secret put CORE_WORKER_API_KEY
+   # Enter your core-api worker's API key when prompted
+   ```
+
+3. **Verify Core API Access**:
+   The worker will authenticate with the core API using the `X-Auth-Key` header and fetch all available AI models dynamically.
+
+#### Core API Integration Benefits
+
+- ✅ **Dynamic Model Discovery**: Automatically lists all available Cloudflare AI models
+- ✅ **Real-time Updates**: Model list updates without redeploying
+- ✅ **Enhanced Metadata**: Includes model descriptions and capabilities
+- ✅ **Fallback Support**: Graceful degradation if core API is unavailable
 
 ### Model Fallback
 

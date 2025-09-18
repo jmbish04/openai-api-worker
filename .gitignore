@@ -4,6 +4,7 @@ node_modules/
 
 # Environment variables
 .dev.vars
+.dev.vars.backup
 .env
 .env.local
 

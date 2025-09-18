@@ -14,10 +14,18 @@ binding = "AI"
 directory = "./static"
 binding = "ASSETS"
 
+# Service binding to core API worker
+[[services]]
+binding = "CORE_API"
+service = "core-api"
+environment = "production"
+
 [vars]
 # Default models configuration
 DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 BACKUP_MODEL = "@cf/openai/gpt-oss-120b"
+# Core API configuration
+CORE_WORKER_API_KEY = "your-core-api-key-here"
 # Enable debug logging
 DEBUG_LOGGING = "true"
 
