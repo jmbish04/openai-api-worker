@@ -27,13 +27,13 @@ function errorLog(message, error = null) {
 }
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env, _ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
-    
+
     // Log incoming request
     debugLog(env, `Incoming request: ${request.method} ${path}`);
-    
+
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -58,17 +58,17 @@ export default {
           const content = await asset.text();
           debugLog(env, 'Landing page served successfully');
           return new Response(content, {
-            headers: { 
+            headers: {
               'Content-Type': 'text/html',
               'Cache-Control': 'public, max-age=3600',
-              ...corsHeaders 
+              ...corsHeaders
             }
           });
         } catch (error) {
           errorLog('Error serving landing page', error);
-          return new Response('Documentation page not found', { 
+          return new Response('Documentation page not found', {
             status: 404,
-            headers: corsHeaders 
+            headers: corsHeaders
           });
         }
       }
@@ -80,15 +80,15 @@ export default {
           const content = await asset.text();
           debugLog(env, 'OpenAPI spec served successfully');
           return new Response(content, {
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
               'Cache-Control': 'public, max-age=3600',
-              ...corsHeaders 
+              ...corsHeaders
             }
           });
         } catch (error) {
           errorLog('Error serving OpenAPI spec', error);
-          return new Response(JSON.stringify({ error: 'OpenAPI specification not found' }), { 
+          return new Response(JSON.stringify({ error: 'OpenAPI specification not found' }), {
             status: 404,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
@@ -97,8 +97,8 @@ export default {
 
       if (path === '/health') {
         debugLog(env, 'Health check requested');
-        return new Response(JSON.stringify({ 
-          status: 'healthy', 
+        return new Response(JSON.stringify({
+          status: 'healthy',
           service: 'openai-api-worker',
           timestamp: new Date().toISOString(),
           version: '1.0.0'
@@ -112,8 +112,8 @@ export default {
       const authResult = await authenticateRequest(request, env);
       if (!authResult.success) {
         errorLog(`Authentication failed: ${authResult.error}`);
-        return new Response(JSON.stringify({ 
-          error: { 
+        return new Response(JSON.stringify({
+          error: {
             message: authResult.error,
             type: 'invalid_request_error'
           }
@@ -137,8 +137,8 @@ export default {
       }
 
       debugLog(env, `Unknown endpoint requested: ${path}`);
-      return new Response(JSON.stringify({ 
-        error: { 
+      return new Response(JSON.stringify({
+        error: {
           message: 'Not found',
           type: 'invalid_request_error'
         }
@@ -149,11 +149,11 @@ export default {
 
     } catch (error) {
       errorLog('Unhandled worker error', error);
-      return new Response(JSON.stringify({ 
-        error: { 
+      return new Response(JSON.stringify({
+        error: {
           message: 'Internal server error',
           type: 'server_error',
-          details: error.message 
+          details: error.message
         }
       }), {
         status: 500,
@@ -168,7 +168,7 @@ export default {
  */
 async function authenticateRequest(request, env) {
   const authHeader = request.headers.get('Authorization');
-  
+
   if (!authHeader) {
     debugLog(env, 'Missing Authorization header');
     return { success: false, error: 'Missing Authorization header' };
@@ -181,7 +181,7 @@ async function authenticateRequest(request, env) {
 
   const token = authHeader.replace('Bearer ', '');
   debugLog(env, `Token extracted: ${token.substring(0, 10)}...`);
-  
+
   // In development, be more lenient
   if (env.DEBUG_LOGGING === 'true' || !env.WORKER_API_KEY) {
     debugLog(env, 'Development mode: bypassing API key validation');
@@ -204,7 +204,7 @@ async function authenticateRequest(request, env) {
 async function handleChatCompletions(request, env, corsHeaders) {
   debugLog(env, 'Parsing chat completions request body');
   const body = await request.json();
-  
+
   const {
     model = env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
     messages,
@@ -212,23 +212,23 @@ async function handleChatCompletions(request, env, corsHeaders) {
     max_tokens = 2048,
     temperature = 0.7,
     top_p = 1,
-    frequency_penalty = 0,
-    presence_penalty = 0,
-    ...otherParams
+    _frequency_penalty = 0,
+    _presence_penalty = 0,
+    _otherParams = {}
   } = body;
 
-  debugLog(env, `Request params`, { 
-    model, 
-    messagesCount: messages?.length, 
-    stream, 
-    max_tokens, 
-    temperature 
+  debugLog(env, `Request params`, {
+    model,
+    messagesCount: messages?.length,
+    stream,
+    max_tokens,
+    temperature
   });
 
   if (!messages || !Array.isArray(messages)) {
     errorLog('Invalid messages parameter');
-    return new Response(JSON.stringify({ 
-      error: { 
+    return new Response(JSON.stringify({
+      error: {
         message: 'messages parameter is required and must be an array',
         type: 'invalid_request_error'
       }
@@ -242,12 +242,12 @@ async function handleChatCompletions(request, env, corsHeaders) {
     // Convert OpenAI format to Cloudflare AI format
     debugLog(env, 'Converting messages to Cloudflare format');
     const cfMessages = await convertMessagesToCloudflareFormat(messages, env);
-    
+
     // Determine which model to use
     const cfModel = mapOpenAIModelToCloudflare(model, env);
     const modelType = getModelType(cfModel);
     debugLog(env, `Using Cloudflare model: ${cfModel} (type: ${modelType})`);
-    
+
     // Format request based on model type
     const aiRequest = formatAIRequest(cfMessages, modelType, {
       max_tokens,
@@ -255,15 +255,15 @@ async function handleChatCompletions(request, env, corsHeaders) {
       top_p,
       stream
     });
-    
-    debugLog(env, 'Formatted AI request', { 
-      modelType, 
-      hasMessages: !!aiRequest.messages, 
+
+    debugLog(env, 'Formatted AI request', {
+      modelType,
+      hasMessages: !!aiRequest.messages,
       hasInput: !!aiRequest.input,
       requestKeys: Object.keys(aiRequest),
       model: cfModel
     });
-    
+
     if (stream) {
       debugLog(env, 'Handling streaming response');
       return await handleStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
@@ -274,7 +274,7 @@ async function handleChatCompletions(request, env, corsHeaders) {
 
   } catch (error) {
     errorLog('Primary model request failed', error);
-    
+
     // Try backup model if primary fails
     const backupModel = env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b';
     if (cfModel !== backupModel) {
@@ -288,13 +288,13 @@ async function handleChatCompletions(request, env, corsHeaders) {
           top_p,
           stream
         });
-        
-        debugLog(env, 'Backup model request formatted', { 
-          backupModel, 
-          backupModelType, 
+
+        debugLog(env, 'Backup model request formatted', {
+          backupModel,
+          backupModelType,
           requestKeys: Object.keys(aiRequest)
         });
-        
+
         if (stream) {
           return await handleStreamingResponse(aiRequest, backupModel, env, corsHeaders, model, backupModelType);
         } else {
@@ -311,7 +311,7 @@ async function handleChatCompletions(request, env, corsHeaders) {
       type: 'server_error',
       details: `${error.message} (Model: ${cfModel}, Type: ${modelType})`
     };
-    
+
     return new Response(JSON.stringify({ error: errorDetails }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -322,12 +322,12 @@ async function handleChatCompletions(request, env, corsHeaders) {
 /**
  * Convert OpenAI messages format to Cloudflare AI format
  */
-async function convertMessagesToCloudflareFormat(messages, env) {
+async function convertMessagesToCloudflareFormat(messages, _env) {
   const cfMessages = [];
-  
+
   for (const message of messages) {
     const { role, content } = message;
-    
+
     // Handle different content types (text, images)
     if (typeof content === 'string') {
       cfMessages.push({ role, content });
@@ -335,27 +335,27 @@ async function convertMessagesToCloudflareFormat(messages, env) {
       // Handle multimodal content (text + images)
       let textContent = '';
       const imageContents = [];
-      
+
       for (const item of content) {
         if (item.type === 'text') {
-          textContent += item.text + ' ';
+          textContent += `${item.text} `;
         } else if (item.type === 'image_url') {
           // For image recognition, we'll include image info
           imageContents.push(item.image_url.url);
         }
       }
-      
+
       if (imageContents.length > 0) {
         // For image recognition, append image info to text
         textContent += `[Images provided: ${imageContents.length} image(s)]`;
       }
-      
+
       cfMessages.push({ role, content: textContent.trim() });
     } else {
       cfMessages.push({ role, content: String(content) });
     }
   }
-  
+
   return cfMessages;
 }
 
@@ -368,17 +368,17 @@ function mapOpenAIModelToCloudflare(model, env) {
     'gpt-4': env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
     'gpt-4-turbo': env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
     'gpt-4o': env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
-    
+
     // Map to simpler models for basic tasks
     'gpt-3.5-turbo': env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b',
     'gpt-4o-mini': env.BACKUP_MODEL || '@cf/openai/gpt-oss-120b',
-    
+
     // Direct Cloudflare model access
     'llama4': '@cf/meta/llama-4-scout-17b-16e-instruct',
     'llama-4': '@cf/meta/llama-4-scout-17b-16e-instruct',
     'openai-gpt': '@cf/openai/gpt-oss-120b'
   };
-  
+
   return modelMap[model] || model;
 }
 
@@ -407,7 +407,7 @@ function getModelType(cfModel) {
  */
 function formatAIRequest(cfMessages, modelType, requestParams) {
   const { max_tokens, temperature, top_p, stream } = requestParams;
-  
+
   switch (modelType) {
     case 'llama4':
       // Llama-4 models support structured responses with messages
@@ -418,10 +418,10 @@ function formatAIRequest(cfMessages, modelType, requestParams) {
         top_p,
         stream: stream || false
       };
-      
-    case 'llama':
+
+    case 'llama': {
       // Regular Llama models use input format with formatted text
-      const llamaInputText = cfMessages.map(msg => 
+      const llamaInputText = cfMessages.map(msg =>
         `<|start_header_id|>${msg.role}<|end_header_id|>\n\n${msg.content}<|eot_id|>`
       ).join('\n');
       return {
@@ -429,8 +429,9 @@ function formatAIRequest(cfMessages, modelType, requestParams) {
         max_tokens,
         temperature
       };
-      
-    case 'openai':
+    }
+
+    case 'openai': {
       // OpenAI models expect simple input format
       const openaiInputText = cfMessages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
       return {
@@ -438,8 +439,9 @@ function formatAIRequest(cfMessages, modelType, requestParams) {
         max_tokens,
         temperature
       };
-      
-    default:
+    }
+
+    default: {
       // Default to simple input format
       const defaultInputText = cfMessages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
       return {
@@ -447,6 +449,7 @@ function formatAIRequest(cfMessages, modelType, requestParams) {
         max_tokens,
         temperature
       };
+    }
   }
 }
 
@@ -457,59 +460,59 @@ async function handleStreamingResponse(aiRequest, model, env, corsHeaders, origi
   debugLog(env, `Starting streaming response with model: ${model}`);
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
-  
+
   const streamResponse = async () => {
     try {
       debugLog(env, 'Making streaming AI request');
       const response = await env.AI.run(model, aiRequest);
-      
+
       // Extract content based on model response format
       let content = '';
-      if (modelType === 'llama4' && response.choices && response.choices[0]) {
-        content = response.choices[0].message?.content || response.choices[0].text || response.response || response;
+      if (modelType === 'llama4' && response?.choices?.[0]) {
+        content = response?.choices?.[0]?.message?.content || response?.choices?.[0]?.text || response?.response || response;
       } else if (response && typeof response.then === 'function') {
         debugLog(env, 'Processing async AI response');
         const result = await response;
         content = result.response || result.result || result.text || result;
-      } else if (response && response.response) {
+      } else if (response?.response) {
         debugLog(env, 'Processing synchronous AI response');
         content = response.response;
-      } else if (response && response.result) {
+      } else if (response?.result) {
         content = response.result;
-      } else if (response && response.text) {
+      } else if (response?.text) {
         content = response.text;
       } else if (typeof response === 'string') {
         content = response;
       } else {
         content = JSON.stringify(response);
       }
-      
+
       if (content) {
         const chunk = createOpenAIStreamChunk(content, originalModel);
         await writer.write(new TextEncoder().encode(chunk));
       }
-      
+
       // Send final chunk
       debugLog(env, 'Sending final stream chunk');
-      const finalChunk = 'data: [DONE]\\n\\n';
+      const finalChunk = 'data: [DONE]\n\n';
       await writer.write(new TextEncoder().encode(finalChunk));
     } catch (error) {
       errorLog('Streaming error', error);
-      const errorChunk = `data: ${JSON.stringify({ 
-        error: { 
+      const errorChunk = `data: ${JSON.stringify({
+        error: {
           message: error.message,
           type: 'server_error'
         }
-      })}\\n\\n`;
+      })}\n\n`;
       await writer.write(new TextEncoder().encode(errorChunk));
     } finally {
       await writer.close();
     }
   };
-  
+
   // Start streaming
   streamResponse();
-  
+
   return new Response(readable, {
     headers: {
       'Content-Type': 'text/event-stream',
@@ -526,26 +529,26 @@ async function handleStreamingResponse(aiRequest, model, env, corsHeaders, origi
 async function handleNonStreamingResponse(aiRequest, model, env, corsHeaders, originalModel, modelType) {
   debugLog(env, `Making AI request to model: ${model}`);
   const response = await env.AI.run(model, aiRequest);
-  
-  debugLog(env, 'AI response received', { 
+
+  debugLog(env, 'AI response received', {
     hasResponse: !!response.response,
     responseLength: response.response?.length,
     responseKeys: Object.keys(response || {}),
     modelType
   });
-  
+
   // Extract content based on model response format
   let content = '';
-  if (modelType === 'llama4' && response.choices && response.choices[0]) {
+  if (modelType === 'llama4' && response?.choices?.[0]) {
     // Llama-4 may return structured response similar to OpenAI
-    content = response.choices[0].message?.content || response.choices[0].text || response.response || response;
-  } else if (response.response) {
+    content = response?.choices?.[0]?.message?.content || response?.choices?.[0]?.text || response?.response || response;
+  } else if (response?.response) {
     // Standard response format
     content = response.response;
-  } else if (response.result) {
+  } else if (response?.result) {
     // Some models return 'result' instead of 'response'
     content = response.result;
-  } else if (response.text) {
+  } else if (response?.text) {
     // Some models return 'text'
     content = response.text;
   } else if (typeof response === 'string') {
@@ -555,7 +558,7 @@ async function handleNonStreamingResponse(aiRequest, model, env, corsHeaders, or
     // Fallback - stringify the response
     content = JSON.stringify(response);
   }
-  
+
   const openaiResponse = {
     id: `chatcmpl-${generateId()}`,
     object: 'chat.completion',
@@ -599,8 +602,8 @@ function createOpenAIStreamChunk(content, model) {
       finish_reason: null
     }]
   };
-  
-  return `data: ${JSON.stringify(chunk)}\\n\\n`;
+
+  return `data: ${JSON.stringify(chunk)}\n\n`;
 }
 
 /**
@@ -610,7 +613,7 @@ async function handleModels(env, corsHeaders) {
   try {
     // Try to fetch models from core API first
     debugLog(env, 'Fetching models from core API');
-    
+
     if (env.CORE_API && env.CORE_WORKER_API_KEY) {
       try {
         const coreApiResponse = await env.CORE_API.fetch('/ai/models/search', {
@@ -620,11 +623,11 @@ async function handleModels(env, corsHeaders) {
             'Content-Type': 'application/json'
           }
         });
-        
+
         if (coreApiResponse.ok) {
           const coreModels = await coreApiResponse.json();
           debugLog(env, `Fetched ${coreModels.length} models from core API`);
-          
+
           // Transform core API models to OpenAI format
           const openaiModels = coreModels.map((model, index) => ({
             id: model.name || model.id || `model-${index}`,
@@ -636,7 +639,7 @@ async function handleModels(env, corsHeaders) {
             parent: null,
             description: model.description || 'Cloudflare Workers AI model'
           }));
-          
+
           // Add our predefined OpenAI-compatible model mappings
           const compatibilityModels = [
             {
@@ -690,11 +693,15 @@ async function handleModels(env, corsHeaders) {
               description: 'GPT-3.5 Turbo compatible via Cloudflare Workers AI'
             }
           ];
-          
+
           // Combine core API models with compatibility models
           const allModels = [...openaiModels, ...compatibilityModels];
-          
-          return new Response(JSON.stringify({ object: 'list', data: allModels }), {
+
+          // Additionally attempt to augment models list with OpenAI and Gemini when API keys are present
+          const remoteModels = await fetchRemoteModelLists(env);
+          const merged = mergeModelLists(allModels, remoteModels);
+
+          return new Response(JSON.stringify({ object: 'list', data: merged }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
           });
         } else {
@@ -709,7 +716,7 @@ async function handleModels(env, corsHeaders) {
   } catch (error) {
     errorLog('Error in handleModels', error);
   }
-  
+
   // Fallback to static model list if core API is unavailable
   debugLog(env, 'Using fallback static model list');
   const models = [
@@ -786,9 +793,116 @@ async function handleModels(env, corsHeaders) {
     }
   ];
 
+  // Try to augment fallback with remote model lists (OpenAI / Gemini) when keys are available
+  try {
+    const remoteModels = await fetchRemoteModelLists(env);
+    const merged = mergeModelLists(models, remoteModels);
+    return new Response(JSON.stringify({ object: 'list', data: merged }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  } catch (err) {
+    debugLog(env, 'Unable to augment fallback models with remote providers', err);
+  }
+
   return new Response(JSON.stringify({ object: 'list', data: models }), {
     headers: { 'Content-Type': 'application/json', ...corsHeaders }
   });
+}
+
+/**
+ * Fetch model lists from remote providers (OpenAI and Gemini) when keys are present
+ */
+async function fetchRemoteModelLists(env) {
+  const results = [];
+
+  // 1) OpenAI
+  if (env.OPENAI_API_KEY) {
+    try {
+      debugLog(env, 'Fetching models from OpenAI');
+      const resp = await fetch('https://api.openai.com/v1/models', {
+        headers: { 'Authorization': `Bearer ${env.OPENAI_API_KEY}` }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data.data)) {
+          const mapped = data.data.map(m => ({
+            id: m.id,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: m.owned_by || 'openai',
+            permission: [],
+            root: m.id,
+            parent: m.parent || null,
+            description: m.description || ''
+          }));
+          results.push(...mapped);
+        }
+      } else {
+        debugLog(env, `OpenAI models fetch failed: ${resp.status}`);
+      }
+    } catch (e) {
+      errorLog('OpenAI models fetch error', e);
+    }
+  }
+
+  // 2) Gemini / Google Generative API
+  if (env.GEMINI_API_KEY) {
+    try {
+      debugLog(env, 'Fetching models from Gemini (Google Generative API)');
+      // Use API key as query param (common for Google API keys)
+      const geminiUrl = `https://generative.googleapis.com/v1/models?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
+      const resp = await fetch(geminiUrl);
+      if (resp.ok) {
+        const data = await resp.json();
+        // Google's Generative API returns models under 'models' or similar; try both
+        const geminiModels = data.models || data.model || data || [];
+        if (Array.isArray(geminiModels)) {
+          const mapped = geminiModels.map((m, idx) => ({
+            id: m.name || m.model || `gemini-model-${idx}`,
+            object: 'model',
+            created: Math.floor(Date.now() / 1000),
+            owned_by: 'gemini',
+            permission: [],
+            root: m.name || m.model || `gemini-model-${idx}`,
+            parent: null,
+            description: m.description || m.displayName || ''
+          }));
+          results.push(...mapped);
+        }
+      } else {
+        debugLog(env, `Gemini models fetch failed: ${resp.status}`);
+      }
+    } catch (e) {
+      errorLog('Gemini models fetch error', e);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Merge and deduplicate model lists by id, preserving order (primary list first)
+ */
+function mergeModelLists(primary = [], additions = []) {
+  const seen = new Set();
+  const merged = [];
+
+  for (const m of primary) {
+    if (!seen.has(m.id)) {
+      merged.push(m);
+      seen.add(m.id);
+    }
+  }
+
+  for (const m of additions) {
+    if (!m || !m.id) continue;
+    if (!seen.has(m.id)) {
+      merged.push(m);
+      seen.add(m.id);
+    }
+  }
+
+  return merged;
 }
 
 /**
@@ -797,18 +911,18 @@ async function handleModels(env, corsHeaders) {
 async function handleCompletions(request, env, corsHeaders) {
   debugLog(env, 'Handling legacy completions request');
   const body = await request.json();
-  const { 
-    model = env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct', 
-    prompt, 
-    max_tokens = 100, 
+  const {
+    model = env.DEFAULT_MODEL || '@cf/meta/llama-4-scout-17b-16e-instruct',
+    prompt,
+    max_tokens = 100,
     temperature = 0.7,
     stream = false
   } = body;
-  
+
   if (!prompt) {
     errorLog('Missing prompt parameter in legacy completions');
-    return new Response(JSON.stringify({ 
-      error: { 
+    return new Response(JSON.stringify({
+      error: {
         message: 'prompt parameter is required',
         type: 'invalid_request_error'
       }
@@ -817,36 +931,36 @@ async function handleCompletions(request, env, corsHeaders) {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
-  
+
   // Convert to chat format and process directly
   try {
     const messages = [{ role: 'user', content: prompt }];
     const cfMessages = await convertMessagesToCloudflareFormat(messages, env);
     const cfModel = mapOpenAIModelToCloudflare(model, env);
     const modelType = getModelType(cfModel);
-    
+
     debugLog(env, `Legacy completions using model: ${cfModel} (type: ${modelType})`);
-    
+
     const aiRequest = formatAIRequest(cfMessages, modelType, {
       max_tokens,
       temperature,
       top_p: 1,
       stream
     });
-    
+
     if (stream) {
       return await handleStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
     } else {
       return await handleNonStreamingResponse(aiRequest, cfModel, env, corsHeaders, model, modelType);
     }
-    
+
   } catch (error) {
     errorLog('Legacy completions error', error);
-    return new Response(JSON.stringify({ 
-      error: { 
+    return new Response(JSON.stringify({
+      error: {
         message: 'AI service error',
         type: 'server_error',
-        details: error.message 
+        details: error.message
       }
     }), {
       status: 500,

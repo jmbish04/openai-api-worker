@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,9 +62,17 @@
             font-weight: 600;
         }
 
-        .badge.streaming { background: #2196F3; }
-        .badge.multimodal { background: #FF9800; }
-        .badge.cors { background: #9C27B0; }
+        .badge.streaming {
+            background: #2196F3;
+        }
+
+        .badge.multimodal {
+            background: #FF9800;
+        }
+
+        .badge.cors {
+            background: #9C27B0;
+        }
 
         .content {
             background: rgba(255, 255, 255, 0.95);
@@ -351,8 +360,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .status-indicator {
@@ -387,17 +401,18 @@
             .header h1 {
                 font-size: 2rem;
             }
-            
+
             .nav {
                 flex-direction: column;
             }
-            
+
             .form-grid {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -423,7 +438,8 @@
 
             <div id="overview" class="section active">
                 <h2>🌟 Welcome to OpenAI API Worker</h2>
-                <p>This Cloudflare Worker provides a fully OpenAI-compatible API interface powered by Cloudflare's AI models. Get the performance of edge computing with the familiarity of OpenAI's API.</p>
+                <p>This Cloudflare Worker provides a fully OpenAI-compatible API interface powered by Cloudflare's AI
+                    models. Get the performance of edge computing with the familiarity of OpenAI's API.</p>
 
                 <h3>✨ Key Features</h3>
                 <ul style="margin-left: 20px; margin-top: 10px;">
@@ -438,7 +454,7 @@
                 <h3>🚀 Quick Start</h3>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-<span id="curl-example">curl -X POST [WORKER_URL]/v1/chat/completions \
+                    <pre><code id="curl-example">curl -X POST [WORKER_URL]/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   -d '{
@@ -446,7 +462,8 @@
     "messages": [
       {"role": "user", "content": "Hello!"}
     ]
-  }'</span>
+  }'
+</code></pre>
                 </div>
 
                 <h3>📚 Resources</h3>
@@ -475,6 +492,35 @@
                                 <span id="connection-text">Not Connected</span>
                             </div>
                         </div>
+
+                        <div class="form-group full-width">
+                            <label for="ai-service">AI Service:</label>
+                            <select id="ai-service" onchange="onAIServiceChange()">
+                                <option value="cloudflare">Cloudflare (edge)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="gemini">Gemini</option>
+                            </select>
+                        </div>
+
+                        <div id="openai-controls" class="form-group" style="display:none">
+                            <label for="openai-model-select">OpenAI Model:</label>
+                            <select id="openai-model-select"></select>
+                        </div>
+
+                        <div id="gemini-controls" class="form-group" style="display:none">
+                            <label for="gemini-model-select">Gemini Model:</label>
+                            <select id="gemini-model-select"></select>
+                        </div>
+
+                        <div id="cloudflare-controls" class="form-group full-width">
+                            <label for="cloudflare-provider-select">Cloudflare Provider:</label>
+                            <select id="cloudflare-provider-select" onchange="onCloudflareProviderChange()"></select>
+                        </div>
+
+                        <div id="cloudflare-model-controls" class="form-group full-width">
+                            <label for="cloudflare-model-select">Cloudflare Model:</label>
+                            <select id="cloudflare-model-select"></select>
+                        </div>
                     </div>
                     <button class="btn" onclick="testConnection()">Test Connection</button>
                     <button class="btn secondary" onclick="clearApiKey()">Clear Key</button>
@@ -482,7 +528,7 @@
 
                 <div class="api-tester">
                     <h3>📋 Available Endpoints</h3>
-                    
+
                     <div class="endpoint-card" onclick="selectEndpoint('models')">
                         <div class="endpoint-method">GET</div>
                         <h4>/v1/models</h4>
@@ -519,7 +565,8 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="chat-api-key">Worker API Key:</label>
-                            <input type="password" id="chat-api-key" placeholder="Enter your worker API key" onchange="onChatApiKeyChange()">
+                            <input type="password" id="chat-api-key" placeholder="Enter your worker API key"
+                                onchange="onChatApiKeyChange()">
                         </div>
                         <div class="form-group">
                             <label for="chat-model">Model:</label>
@@ -532,7 +579,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="chat-container" id="chat-messages">
                         <div class="message assistant">
                             <div class="role">Assistant</div>
@@ -542,7 +589,8 @@
 
                     <div class="form-group">
                         <label for="chat-input">Your Message:</label>
-                        <textarea id="chat-input" placeholder="Type your message here..." onkeypress="handleChatKeyPress(event)"></textarea>
+                        <textarea id="chat-input" placeholder="Type your message here..."
+                            onkeypress="handleChatKeyPress(event)"></textarea>
                     </div>
 
                     <div style="display: flex; gap: 10px; align-items: center;">
@@ -557,7 +605,7 @@
 
             <div id="endpoints" class="section">
                 <h2>🔗 API Endpoints</h2>
-                
+
                 <h3>Public Endpoints (No Authentication)</h3>
                 <div class="endpoint-card">
                     <div class="endpoint-method">GET</div>
@@ -603,7 +651,7 @@
                 <h3>JavaScript / Node.js</h3>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-const response = await fetch('<span class="worker-url-placeholder">[WORKER_URL]</span>/v1/chat/completions', {
+                    <pre><code class="language-javascript">const response = await fetch('[WORKER_URL]/v1/chat/completions', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -612,9 +660,9 @@ const response = await fetch('<span class="worker-url-placeholder">[WORKER_URL]<
   body: JSON.stringify({
     model: 'gpt-4',
     messages: [
-      { 
-        role: 'user', 
-        content: 'Explain quantum computing' 
+      {
+        role: 'user',
+        content: 'Explain quantum computing'
       }
     ],
     max_tokens: 500,
@@ -624,15 +672,16 @@ const response = await fetch('<span class="worker-url-placeholder">[WORKER_URL]<
 
 const data = await response.json();
 console.log(data.choices[0].message.content);
+</code></pre>
                 </div>
 
                 <h3>Python</h3>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-import requests
+                    <pre><code class="language-python">import requests
 
 response = requests.post(
-    '<span class="worker-url-placeholder">[WORKER_URL]</span>/v1/chat/completions',
+    '[WORKER_URL]/v1/chat/completions',
     headers={
         'Content-Type': 'application/json',
         'Authorization': 'Bearer YOUR_WORKER_API_KEY'
@@ -641,7 +690,7 @@ response = requests.post(
         'model': 'gpt-4',
         'messages': [
             {
-                'role': 'user', 
+                'role': 'user',
                 'content': 'Explain quantum computing'
             }
         ],
@@ -651,12 +700,13 @@ response = requests.post(
 )
 
 print(response.json()['choices'][0]['message']['content'])
+</code></pre>
                 </div>
 
                 <h3>cURL</h3>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-curl -X POST <span class="worker-url-placeholder">[WORKER_URL]</span>/v1/chat/completions \
+                    <pre><code class="language-shell">curl -X POST [WORKER_URL]/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   -d '{
@@ -666,17 +716,19 @@ curl -X POST <span class="worker-url-placeholder">[WORKER_URL]</span>/v1/chat/co
     ],
     "max_tokens": 100
   }'
+</code></pre>
                 </div>
             </div>
 
             <div id="auth" class="section">
                 <h2>🔐 Authentication</h2>
-                
-                <p>This API uses Bearer token authentication. Include your worker API key in the Authorization header:</p>
+
+                <p>This API uses Bearer token authentication. Include your worker API key in the Authorization header:
+                </p>
 
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
-Authorization: Bearer YOUR_WORKER_API_KEY
+                    Authorization: Bearer YOUR_WORKER_API_KEY
                 </div>
 
                 <h3>Setting Up Your Worker API Key</h3>
@@ -688,7 +740,8 @@ Authorization: Bearer YOUR_WORKER_API_KEY
                 </ol>
 
                 <div class="alert error">
-                    <strong>⚠️ Security Warning:</strong> Never expose your worker API key in client-side JavaScript or public repositories. Always use environment variables or secure key management systems.
+                    <strong>⚠️ Security Warning:</strong> Never expose your worker API key in client-side JavaScript or
+                    public repositories. Always use environment variables or secure key management systems.
                 </div>
             </div>
         </div>
@@ -700,17 +753,26 @@ Authorization: Bearer YOUR_WORKER_API_KEY
         let availableModels = [];
 
         // Load available models on page load
-        document.addEventListener('DOMContentLoaded', async function() {
+        document.addEventListener('DOMContentLoaded', async function () {
             try {
                 const currentOrigin = location.origin;
-                const curlExample = document.getElementById('curl-example');
-                if (curlExample) {
-                    curlExample.textContent = curlExample.textContent.replace('[WORKER_URL]', currentOrigin);
-                }
+
+                // Replace placeholder in code blocks
                 document.querySelectorAll('.worker-url-placeholder').forEach(el => {
                     el.textContent = currentOrigin;
                 });
-                
+
+                // Update standalone curl/example block
+                const curlExample = document.getElementById('curl-example');
+                if (curlExample) {
+                    curlExample.textContent = curlExample.textContent.replace(/\[WORKER_URL\]/g, currentOrigin);
+                }
+
+                // Replace placeholders inside code samples
+                document.querySelectorAll('.code-block code').forEach(codeEl => {
+                    codeEl.textContent = codeEl.textContent.replace(/\[WORKER_URL\]/g, currentOrigin);
+                });
+
                 // Load models in background (without requiring API key for UI setup)
                 await loadAvailableModels();
             } catch (error) {
@@ -720,14 +782,13 @@ Authorization: Bearer YOUR_WORKER_API_KEY
 
         async function loadAvailableModels() {
             try {
-                // Try to load models without auth first (will fail but we handle gracefully)
                 const response = await fetch('/v1/models');
                 if (response.status === 401) {
-                    // Expected - no auth provided, but endpoint exists
+                    // Endpoint exists but requires auth
                     console.log('Models endpoint available, auth required');
                     return;
                 }
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     availableModels = data.data || [];
@@ -740,21 +801,23 @@ Authorization: Bearer YOUR_WORKER_API_KEY
 
         async function loadModelsWithAuth(apiKey) {
             if (!apiKey) return;
-            
+
             try {
                 const response = await fetch('/v1/models', {
                     headers: {
                         'Authorization': `Bearer ${apiKey}`
                     }
                 });
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     availableModels = data.data || [];
                     updateModelSelectors();
-                    
+
                     // Show models info in UI
                     showModelsInfo(data);
+                } else {
+                    console.log('Models request failed with status', response.status);
                 }
             } catch (error) {
                 console.log('Error loading models:', error);
@@ -763,79 +826,134 @@ Authorization: Bearer YOUR_WORKER_API_KEY
 
         function updateModelSelectors() {
             const selectors = ['chat-model', 'test-model', 'completion-model'];
-            
+
             selectors.forEach(selectorId => {
                 const selector = document.getElementById(selectorId);
-                if (selector && availableModels.length > 0) {
-                    // Keep current selection if it exists
+                if (selector) {
                     const currentValue = selector.value;
-                    
-                    // Clear and populate
                     selector.innerHTML = '';
-                    
-                    // Add default options first (for compatibility)
-                    const defaultOptions = [
-                        { id: 'gpt-4', name: 'GPT-4 (Recommended)' },
-                        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
-                        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
-                        { id: 'gpt-4o', name: 'GPT-4o' },
-                        { id: 'gpt-4o-mini', name: 'GPT-4o Mini' }
-                    ];
-                    
-                    defaultOptions.forEach(opt => {
-                        const option = document.createElement('option');
-                        option.value = opt.id;
-                        option.textContent = opt.name;
-                        selector.appendChild(option);
+
+                    // Add a default option
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = '';
+                    defaultOpt.textContent = 'Select model...';
+                    selector.appendChild(defaultOpt);
+
+                    availableModels.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.id;
+                        selector.appendChild(opt);
                     });
-                    
-                    // Add separator
-                    if (availableModels.length > 5) {
-                        const separator = document.createElement('option');
-                        separator.disabled = true;
-                        separator.textContent = '─────── Available Models ───────';
-                        selector.appendChild(separator);
-                    }
-                    
-                    // Add discovered models
-                    availableModels.forEach(model => {
-                        // Skip if already in defaults
-                        if (!defaultOptions.find(opt => opt.id === model.id)) {
-                            const option = document.createElement('option');
-                            option.value = model.id;
-                            option.textContent = `${model.id} ${model.owned_by ? `(${model.owned_by})` : ''}`;
-                            if (model.description) {
-                                option.title = model.description;
-                            }
-                            selector.appendChild(option);
-                        }
-                    });
-                    
-                    // Restore selection if it exists
+
                     if (currentValue) {
-                        selector.value = currentValue;
+                        try { selector.value = currentValue; } catch (e) { }
                     }
                 }
             });
+
+            // New: populate service-specific selectors
+            const openaiSelect = document.getElementById('openai-model-select');
+            const geminiSelect = document.getElementById('gemini-model-select');
+            const cfProviderSelect = document.getElementById('cloudflare-provider-select');
+            const cfModelSelect = document.getElementById('cloudflare-model-select');
+
+            // Derive lists
+            const openaiModels = availableModels.filter(m => (m.owned_by || '').toLowerCase().includes('openai'));
+            const geminiModels = availableModels.filter(m => (m.owned_by || '').toLowerCase().includes('gemini'));
+            const cloudModels = availableModels.filter(m => {
+                const owned = (m.owned_by || '').toLowerCase();
+                return owned.includes('cloudflare') || (m.id && m.id.startsWith('@cf/')) || owned.includes('cloudflare-proxy');
+            });
+
+            // Populate OpenAI models
+            if (openaiSelect) {
+                openaiSelect.innerHTML = '';
+                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select OpenAI model...'; openaiSelect.appendChild(d);
+                openaiModels.forEach(m => {
+                    const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; openaiSelect.appendChild(o);
+                });
+            }
+
+            // Populate Gemini models
+            if (geminiSelect) {
+                geminiSelect.innerHTML = '';
+                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select Gemini model...'; geminiSelect.appendChild(d);
+                geminiModels.forEach(m => {
+                    const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; geminiSelect.appendChild(o);
+                });
+            }
+
+            // Derive providers from cloudModels (look for '@cf/<provider>/...')
+            const providers = [];
+            const providerMap = {};
+            cloudModels.forEach(m => {
+                let providerKey = 'compatibility';
+                if (m.id && m.id.startsWith('@cf/')) {
+                    const parts = m.id.split('/');
+                    providerKey = parts[1] || providerKey;
+                } else if (m.root && m.root.startsWith('@cf/')) {
+                    const parts = m.root.split('/');
+                    providerKey = parts[1] || providerKey;
+                } else if (m.owned_by) {
+                    providerKey = m.owned_by;
+                }
+
+                if (!providers.includes(providerKey)) providers.push(providerKey);
+                providerMap[providerKey] = providerMap[providerKey] || [];
+                providerMap[providerKey].push(m);
+            });
+
+            if (cfProviderSelect) {
+                cfProviderSelect.innerHTML = '';
+                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select provider...'; cfProviderSelect.appendChild(d);
+                providers.forEach(p => {
+                    const o = document.createElement('option'); o.value = p; o.textContent = p; cfProviderSelect.appendChild(o);
+                });
+            }
+
+            // Populate cloudflare model select based on currently selected provider
+            function populateCfModelsForProvider(selectedProvider) {
+                if (!cfModelSelect) return;
+                cfModelSelect.innerHTML = '';
+                const d = document.createElement('option'); d.value = ''; d.textContent = 'Select Cloudflare model...'; cfModelSelect.appendChild(d);
+                if (!selectedProvider) return;
+                const list = providerMap[selectedProvider] || [];
+                list.forEach(m => {
+                    const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; cfModelSelect.appendChild(o);
+                });
+            }
+
+            const selectedProvider = (cfProviderSelect && cfProviderSelect.value) || null;
+            populateCfModelsForProvider(selectedProvider);
         }
 
         function showModelsInfo(data) {
-            // Add models info to the UI when loaded
             const modelCount = data.data ? data.data.length : 0;
-            const coreApiModels = data.data ? data.data.filter(m => m.owned_by === 'cloudflare').length : 0;
-            
+            const coreApiModels = data.data ? data.data.filter(m => (m.owned_by || '').toLowerCase().includes('cloudflare')).length : 0;
+
             // Update connection status area with models info
             const statusArea = document.querySelector('#tester .api-tester:first-child');
-            if (statusArea && !document.getElementById('models-info')) {
-                const modelsInfo = document.createElement('div');
-                modelsInfo.id = 'models-info';
-                modelsInfo.innerHTML = `
-                    <div class="alert info" style="margin-top: 15px;">
-                        <strong>📊 Models Loaded:</strong> ${modelCount} total 
-                        ${coreApiModels > 7 ? `(${coreApiModels} from Core API + compatibility layers)` : '(fallback mode)'}
-                    </div>
-                `;
-                statusArea.appendChild(modelsInfo);
+            if (statusArea) {
+                let modelsInfo = document.getElementById('models-info');
+                if (!modelsInfo) {
+                    modelsInfo = document.createElement('div');
+                    modelsInfo.id = 'models-info';
+                    statusArea.appendChild(modelsInfo);
+                }
+
+                modelsInfo.innerHTML = `<div class="alert info">Detected ${modelCount} model(s) available${coreApiModels ? ` — ${coreApiModels} owned by Cloudflare` : ''}.</div>`;
+
+                // Add a short list of first 10 models
+                const list = document.createElement('div');
+                list.className = 'json-viewer';
+                list.textContent = (data.data || []).slice(0, 10).map(m => `${m.id} — ${m.description || ''}`).join('\n');
+
+                // Replace existing list if present
+                const existingList = document.getElementById('models-list');
+                if (existingList) existingList.remove();
+                list.id = 'models-list';
+                statusArea.appendChild(list);
             }
         }
 
@@ -844,500 +962,132 @@ Authorization: Bearer YOUR_WORKER_API_KEY
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
-            
+
             // Remove active class from nav items
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            
+
             // Show selected section
-            document.getElementById(sectionId).classList.add('active');
-            
-            // Add active class to clicked nav item
-            event.target.classList.add('active');
+            const target = document.getElementById(sectionId);
+            if (target) target.classList.add('active');
+
+            // Mark nav item active by matching onclick content
+            const clickedNav = Array.from(document.querySelectorAll('.nav-item')).find(item => {
+                const attr = item.getAttribute('onclick') || '';
+                return attr.includes(`'${sectionId}'`) || attr.includes(`"${sectionId}"`);
+            });
+            if (clickedNav) clickedNav.classList.add('active');
         }
 
         function copyToClipboard(button) {
-            const codeBlock = button.parentElement;
-            const text = codeBlock.innerText.replace('Copy', '').trim();
-            
-            navigator.clipboard.writeText(text).then(() => {
-                const originalText = button.textContent;
-                button.textContent = 'Copied!';
-                setTimeout(() => {
-                    button.textContent = originalText;
-                }, 2000);
-            });
+            try {
+                const codeBlock = button.parentElement;
+                const codeEl = codeBlock.querySelector('code');
+                if (!codeEl) return;
+                const text = codeEl.textContent;
+
+                navigator.clipboard.writeText(text).then(() => {
+                    const original = button.textContent;
+                    button.textContent = 'Copied!';
+                    setTimeout(() => { button.textContent = original; }, 2000);
+                }).catch(err => {
+                    console.error('Copy failed', err);
+                });
+            } catch (e) {
+                console.error('copyToClipboard error', e);
+            }
         }
 
         async function testConnection() {
             const apiKey = document.getElementById('global-api-key').value;
-            if (!apiKey) {
-                alert('Please enter your API key first');
-                return;
-            }
-
             const statusIndicator = document.getElementById('connection-status');
             const statusText = document.getElementById('connection-text');
-            
+
+            // Optimistically show loading
             statusIndicator.className = 'status-indicator';
-            statusText.textContent = 'Testing...';
+            statusText.textContent = 'Checking...';
 
             try {
-                const response = await fetch('/v1/models', {
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    }
-                });
+                const headers = {};
+                if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-                if (response.ok) {
+                const resp = await fetch('/v1/models', { headers });
+
+                if (resp.ok) {
+                    const data = await resp.json();
                     statusIndicator.className = 'status-indicator connected';
-                    statusText.textContent = 'Connected';
-                    
-                    // Load models with the valid API key
-                    await loadModelsWithAuth(apiKey);
+                    statusText.textContent = `Connected — ${data.data ? data.data.length : 0} model(s)`;
+                    availableModels = data.data || [];
+                    updateModelSelectors();
+                    showModelsInfo(data);
+                } else if (resp.status === 401) {
+                    statusIndicator.className = 'status-indicator disconnected';
+                    statusText.textContent = 'Auth required — endpoint available';
                 } else {
                     statusIndicator.className = 'status-indicator disconnected';
-                    statusText.textContent = 'Authentication Failed';
+                    statusText.textContent = `Error: ${resp.status}`;
                 }
-            } catch (error) {
+            } catch (err) {
                 statusIndicator.className = 'status-indicator disconnected';
-                statusText.textContent = 'Connection Failed';
+                statusText.textContent = 'Connection failed';
+                console.error('testConnection error', err);
             }
         }
 
         function clearApiKey() {
-            document.getElementById('global-api-key').value = '';
+            const el = document.getElementById('global-api-key');
+            if (el) el.value = '';
             const statusIndicator = document.getElementById('connection-status');
             const statusText = document.getElementById('connection-text');
             statusIndicator.className = 'status-indicator disconnected';
             statusText.textContent = 'Not Connected';
-            
-            // Clear models info
-            const modelsInfo = document.getElementById('models-info');
-            if (modelsInfo) {
-                modelsInfo.remove();
-            }
         }
 
         async function onChatApiKeyChange() {
-            const apiKey = document.getElementById('chat-api-key').value;
-            if (apiKey && apiKey.length > 10) {
-                await loadModelsWithAuth(apiKey);
-            }
+            const key = document.getElementById('chat-api-key').value;
+            if (!key) return;
+            await loadModelsWithAuth(key);
         }
 
-        function selectEndpoint(endpoint) {
-            currentEndpoint = endpoint;
-            
-            // Update active state
-            document.querySelectorAll('.endpoint-card').forEach(card => {
-                card.classList.remove('active');
+        function onAIServiceChange() {
+            const svc = document.getElementById('ai-service').value;
+            document.getElementById('openai-controls').style.display = svc === 'openai' ? 'block' : 'none';
+            document.getElementById('gemini-controls').style.display = svc === 'gemini' ? 'block' : 'none';
+            document.getElementById('cloudflare-controls').style.display = svc === 'cloudflare' ? 'block' : 'none';
+            document.getElementById('cloudflare-model-controls').style.display = svc === 'cloudflare' ? 'block' : 'none';
+        }
+
+        function onCloudflareProviderChange() {
+            const provider = document.getElementById('cloudflare-provider-select').value;
+            const cfModelSelect = document.getElementById('cloudflare-model-select');
+            if (!cfModelSelect) return;
+
+            // Rebuild provider map from availableModels (same logic as updateModelSelectors)
+            const cloudModels = availableModels.filter(m => {
+                const owned = (m.owned_by || '').toLowerCase();
+                return owned.includes('cloudflare') || (m.id && m.id.startsWith('@cf/')) || owned.includes('cloudflare-proxy');
             });
-            event.currentTarget.classList.add('active');
 
-            const tester = document.getElementById('endpoint-tester');
-            const title = document.getElementById('endpoint-title');
-            const form = document.getElementById('endpoint-form');
-            
-            tester.style.display = 'block';
-            
-            if (endpoint === 'models') {
-                title.textContent = 'Test: GET /v1/models';
-                form.innerHTML = `
-                    <button class="btn" onclick="testModelsEndpoint()">Get Available Models</button>
-                `;
-            } else if (endpoint === 'chat') {
-                title.textContent = 'Test: POST /v1/chat/completions';
-                form.innerHTML = `
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="test-model">Model:</label>
-                            <select id="test-model">
-                                <option value="gpt-4">gpt-4</option>
-                                <option value="gpt-4-turbo">gpt-4-turbo</option>
-                                <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="test-max-tokens">Max Tokens:</label>
-                            <input type="number" id="test-max-tokens" value="500" min="1" max="4096">
-                        </div>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="test-message">Message:</label>
-                        <textarea id="test-message" placeholder="Enter your test message...">Hello! Can you help me understand what you can do?</textarea>
-                    </div>
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="test-stream"> Enable Streaming
-                        </label>
-                    </div>
-                    <button class="btn" onclick="testChatEndpoint()">Send Chat Request</button>
-                `;
-            } else if (endpoint === 'completions') {
-                title.textContent = 'Test: POST /v1/completions';
-                form.innerHTML = `
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="completion-model">Model:</label>
-                            <select id="completion-model">
-                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                <option value="gpt-4">GPT-4</option>
-                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                <option value="gpt-4o">GPT-4o</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="completion-max-tokens">Max Tokens:</label>
-                            <input type="number" id="completion-max-tokens" value="100" min="1" max="4096">
-                        </div>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="completion-prompt">Prompt:</label>
-                        <textarea id="completion-prompt" placeholder="Enter your prompt...">Write a short story about</textarea>
-                    </div>
-                    <button class="btn" onclick="testCompletionEndpoint()">Send Completion Request</button>
-                `;
-            }
-        }
-
-        async function testModelsEndpoint() {
-            const apiKey = document.getElementById('global-api-key').value;
-            if (!apiKey) {
-                alert('Please enter your API key first');
-                return;
-            }
-
-            const responseArea = document.getElementById('endpoint-response');
-            responseArea.innerHTML = '<div class="alert info">Fetching available models...</div>';
-
-            try {
-                const response = await fetch('/v1/models', {
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`
-                    }
-                });
-
-                const data = await response.json();
-                
-                if (response.ok) {
-                    responseArea.innerHTML = `
-                        <div class="alert success">✅ Models fetched successfully!</div>
-                        <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                } else {
-                    responseArea.innerHTML = `
-                        <div class="alert error">❌ Error: ${data.error?.message || 'Unknown error'}</div>
-                        <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
-                    `;
+            const list = cloudModels.filter(m => {
+                if (m.id && m.id.startsWith('@cf/')) {
+                    const parts = m.id.split('/');
+                    return parts[1] === provider;
                 }
-            } catch (error) {
-                responseArea.innerHTML = `<div class="alert error">❌ Network error: ${error.message}</div>`;
-            }
-        }
-
-        async function testChatEndpoint() {
-            const apiKey = document.getElementById('global-api-key').value;
-            if (!apiKey) {
-                alert('Please enter your API key first');
-                return;
-            }
-
-            const model = document.getElementById('test-model').value;
-            const message = document.getElementById('test-message').value;
-            const maxTokens = parseInt(document.getElementById('test-max-tokens').value);
-            const stream = document.getElementById('test-stream').checked;
-
-            const responseArea = document.getElementById('endpoint-response');
-            responseArea.innerHTML = '<div class="alert info">Sending chat request...</div>';
-
-            try {
-                const response = await fetch('/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [{ role: 'user', content: message }],
-                        max_tokens: maxTokens,
-                        stream: stream
-                    })
-                });
-
-                if (stream) {
-                    responseArea.innerHTML = '<div class="alert success">✅ Streaming response:</div><div class="json-viewer" id="stream-output">Connecting...</div>';
-                    const streamOutput = document.getElementById('stream-output');
-                    
-                    if (!response.body) {
-                        throw new Error('Streaming not supported by browser');
-                    }
-                    
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder('utf-8');
-                    let buffer = '';
-                    let fullResponse = '';
-
-                    try {
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-
-                            buffer += decoder.decode(value, { stream: true });
-                            const lines = buffer.split('\n');
-                            
-                            // Keep the last incomplete line in buffer
-                            buffer = lines.pop() || '';
-
-                            for (const line of lines) {
-                                if (line.trim() === '') continue;
-                                
-                                if (line.startsWith('data: ')) {
-                                    const data = line.slice(6).trim();
-                                    
-                                    if (data === '[DONE]') {
-                                        streamOutput.textContent = fullResponse || 'Stream completed';
-                                        break;
-                                    }
-
-                                    try {
-                                        const json = JSON.parse(data);
-                                        const content = json.choices?.[0]?.delta?.content;
-                                        if (content) {
-                                            fullResponse += content;
-                                            streamOutput.textContent = fullResponse + '▋';
-                                        }
-                                    } catch (parseError) {
-                                        console.log('Parse error for chunk:', data);
-                                    }
-                                }
-                            }
-                        }
-                    } finally {
-                        reader.releaseLock();
-                        // Remove cursor
-                        streamOutput.textContent = fullResponse || 'No content received';
-                    }
-                } else {
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        responseArea.innerHTML = `
-                            <div class="alert success">✅ Chat response received!</div>
-                            <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
-                        `;
-                    } else {
-                        responseArea.innerHTML = `
-                            <div class="alert error">❌ Error: ${data.error?.message || 'Unknown error'}</div>
-                            <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
-                        `;
-                    }
+                if (m.root && m.root.startsWith('@cf/')) {
+                    const parts = m.root.split('/');
+                    return parts[1] === provider;
                 }
-            } catch (error) {
-                responseArea.innerHTML = `<div class="alert error">❌ Network error: ${error.message}</div>`;
-            }
-        }
+                return (m.owned_by || '') === provider;
+            });
 
-        async function testCompletionEndpoint() {
-            const apiKey = document.getElementById('global-api-key').value;
-            if (!apiKey) {
-                alert('Please enter your API key first');
-                return;
-            }
-
-            const model = document.getElementById('completion-model').value;
-            const prompt = document.getElementById('completion-prompt').value;
-            const maxTokens = parseInt(document.getElementById('completion-max-tokens').value);
-
-            const responseArea = document.getElementById('endpoint-response');
-            responseArea.innerHTML = '<div class="alert info">Sending completion request...</div>';
-
-            try {
-                const response = await fetch('/v1/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        prompt: prompt,
-                        max_tokens: maxTokens
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (response.ok) {
-                    responseArea.innerHTML = `
-                        <div class="alert success">✅ Completion response received!</div>
-                        <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                } else {
-                    responseArea.innerHTML = `
-                        <div class="alert error">❌ Error: ${data.error?.message || 'Unknown error'}</div>
-                        <div class="json-viewer">${JSON.stringify(data, null, 2)}</div>
-                    `;
-                }
-            } catch (error) {
-                responseArea.innerHTML = `<div class="alert error">❌ Network error: ${error.message}</div>`;
-            }
-        }
-
-        async function sendChatMessage() {
-            const apiKey = document.getElementById('chat-api-key').value;
-            const model = document.getElementById('chat-model').value;
-            const message = document.getElementById('chat-input').value.trim();
-            const stream = document.getElementById('stream-chat').checked;
-
-            if (!apiKey) {
-                alert('Please enter your API key first');
-                return;
-            }
-
-            if (!message) {
-                alert('Please enter a message');
-                return;
-            }
-
-            const sendBtn = document.getElementById('send-btn');
-            const chatMessages = document.getElementById('chat-messages');
-            
-            // Add user message to chat
-            const userMessage = document.createElement('div');
-            userMessage.className = 'message user';
-            userMessage.innerHTML = `<div class="role">You</div><div>${message}</div>`;
-            chatMessages.appendChild(userMessage);
-
-            // Clear input
-            document.getElementById('chat-input').value = '';
-
-            // Add assistant message placeholder
-            const assistantMessage = document.createElement('div');
-            assistantMessage.className = 'message assistant';
-            assistantMessage.innerHTML = `<div class="role">Assistant</div><div id="assistant-content"><div class="loading"></div>Thinking...</div>`;
-            chatMessages.appendChild(assistantMessage);
-
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            sendBtn.disabled = true;
-            sendBtn.innerHTML = '<div class="loading"></div>Sending...';
-
-            try {
-                // Add to chat history
-                chatHistory.push({ role: 'user', content: message });
-
-                const response = await fetch('/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: chatHistory,
-                        stream: stream,
-                        max_tokens: 1000
-                    })
-                });
-
-                const assistantContent = document.getElementById('assistant-content');
-
-                if (stream) {
-                    assistantContent.textContent = '';
-                    let fullResponse = '';
-                    
-                    if (!response.body) {
-                        throw new Error('Streaming not supported');
-                    }
-                    
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder('utf-8');
-                    let buffer = '';
-
-                    try {
-                        while (true) {
-                            const { done, value } = await reader.read();
-                            if (done) break;
-
-                            buffer += decoder.decode(value, { stream: true });
-                            const lines = buffer.split('\n');
-                            
-                            // Keep the last incomplete line in buffer
-                            buffer = lines.pop() || '';
-
-                            for (const line of lines) {
-                                if (line.trim() === '') continue;
-                                
-                                if (line.startsWith('data: ')) {
-                                    const data = line.slice(6).trim();
-                                    
-                                    if (data === '[DONE]') {
-                                        chatHistory.push({ role: 'assistant', content: fullResponse });
-                                        assistantContent.textContent = fullResponse;
-                                        break;
-                                    }
-
-                                    try {
-                                        const json = JSON.parse(data);
-                                        const content = json.choices?.[0]?.delta?.content;
-                                        if (content) {
-                                            fullResponse += content;
-                                            assistantContent.textContent = fullResponse;
-                                            chatMessages.scrollTop = chatMessages.scrollHeight;
-                                        }
-                                    } catch (parseError) {
-                                        console.log('Parse error for chat chunk:', data);
-                                    }
-                                }
-                            }
-                        }
-                    } finally {
-                        reader.releaseLock();
-                        if (fullResponse) {
-                            chatHistory.push({ role: 'assistant', content: fullResponse });
-                        }
-                    }
-                } else {
-                    const data = await response.json();
-                    
-                    if (response.ok) {
-                        const responseText = data.choices[0].message.content;
-                        assistantContent.textContent = responseText;
-                        chatHistory.push({ role: 'assistant', content: responseText });
-                    } else {
-                        assistantContent.innerHTML = `<span style="color: red;">Error: ${data.error?.message || 'Unknown error'}</span>`;
-                    }
-                }
-            } catch (error) {
-                const assistantContent = document.getElementById('assistant-content');
-                assistantContent.innerHTML = `<span style="color: red;">Network error: ${error.message}</span>`;
-            } finally {
-                sendBtn.disabled = false;
-                sendBtn.textContent = 'Send Message';
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-        }
-
-        function handleChatKeyPress(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendChatMessage();
-            }
-        }
-
-        function clearChat() {
-            const chatMessages = document.getElementById('chat-messages');
-            chatMessages.innerHTML = `
-                <div class="message assistant">
-                    <div class="role">Assistant</div>
-                    <div>Chat cleared! Ready for a new conversation.</div>
-                </div>
-            `;
-            chatHistory = [];
+            cfModelSelect.innerHTML = '';
+            const d = document.createElement('option'); d.value = ''; d.textContent = 'Select Cloudflare model...'; cfModelSelect.appendChild(d);
+            list.forEach(m => {
+                const o = document.createElement('option'); o.value = m.id; o.textContent = m.id; cfModelSelect.appendChild(o);
+            });
         }
     </script>
 </body>
+
 </html>
