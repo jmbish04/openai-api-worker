@@ -772,6 +772,8 @@ print(response.json()['choices'][0]['message']['content'])
             // update nav active state
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => { if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(id)) n.classList.add('active'); });
+            // Update URL hash
+            location.hash = id;
         }
 
         // Copy button for code samples
@@ -805,6 +807,10 @@ print(response.json()['choices'][0]['message']['content'])
                 document.getElementById('global-api-key').addEventListener('change', async () => await loadModelsWithAuth(document.getElementById('global-api-key').value));
                 document.getElementById('chat-api-key').addEventListener('change', onChatApiKeyChange);
 
+                // Handle hash routing
+                window.addEventListener('hashchange', handleHashChange);
+                handleHashChange(); // Handle initial hash
+
                 // Chat key: update model selectors when changed
                 await loadAvailableModels();
                 onAIServiceChange();
@@ -812,6 +818,16 @@ print(response.json()['choices'][0]['message']['content'])
                 console.log('Initialization error:', error);
             }
         });
+
+        // Handle URL hash changes for navigation
+        function handleHashChange() {
+            const hash = location.hash.substring(1);
+            if (hash) {
+                showSection(hash);
+            } else {
+                showSection('overview'); // Default section
+            }
+        }
 
         // Load models without auth (public /v1/models) to populate Cloudflare providers
         async function loadAvailableModels() {

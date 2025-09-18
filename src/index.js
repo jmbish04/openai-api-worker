@@ -616,7 +616,7 @@ async function handleModelsRequest(_req, env) {
     const resp = await fetch(`${env.CORE_API}/v1/models`, { headers: { 'Authorization': `Bearer ${env.CORE_WORKER_API_KEY}` } });
     if (resp.ok) {
       const json = await resp.json();
-      coreList = (json.data || []).map(m => ({ id: m.id, object: m.object || 'model', owner: m.owner || 'core' }));
+      coreList = (json.data || []).map(m => ({ id: m.id, object: m.object || 'model', owner: m.owner || 'cloudflare' }));
     }
   } catch (_e) {
     // ignore
@@ -652,7 +652,7 @@ async function fetchRemoteModelLists(env) {
       if (r.ok) {
         const j = await r.json();
         if (Array.isArray(j.data)) {
-          results.openai = j.data.map(m => ({ id: m.id || m.name, object: m.object || 'model', owner: m.owned_by || m.owner || 'openai' }));
+          results.openai = j.data.map(m => ({ id: m.id || m.name, object: 'model', owner: m.owned_by || m.owner || 'openai' }));
         }
       }
     } catch (e) {
