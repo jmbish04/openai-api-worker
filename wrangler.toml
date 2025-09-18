@@ -24,17 +24,3 @@ environment = "production"
 # Default models configuration
 DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 BACKUP_MODEL = "@cf/openai/gpt-oss-120b"
-# Core API configuration
-CORE_WORKER_API_KEY = "your-core-api-key-here"
-# Enable debug logging
-DEBUG_LOGGING = "true"
-
-# Environment-specific variables
-[env.production.vars]
-# Set these in production via wrangler secret put
-# WORKER_API_KEY will be set as a secret
-DEBUG_LOGGING = "false"
-
-[env.development.vars]
-# Development variables loaded from .dev.vars
-DEBUG_LOGGING = "true"

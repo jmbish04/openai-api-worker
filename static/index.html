@@ -443,7 +443,9 @@
   -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   -d '{
     "model": "gpt-4",
-    "messages": [{"role": "user", "content": "Hello!"}]
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ]
   }'</span>
                 </div>
 
@@ -517,16 +519,16 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="chat-api-key">Worker API Key:</label>
-                            <input type="password" id="chat-api-key" placeholder="Enter your worker API key">
+                            <input type="password" id="chat-api-key" placeholder="Enter your worker API key" onchange="onChatApiKeyChange()">
                         </div>
                         <div class="form-group">
                             <label for="chat-model">Model:</label>
                             <select id="chat-model">
-                                <option value="gpt-4">gpt-4</option>
-                                <option value="gpt-4-turbo">gpt-4-turbo</option>
-                                <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                                <option value="@cf/meta/llama-4-scout-17b-16e-instruct">llama-4-scout-17b</option>
-                                <option value="@cf/openai/gpt-oss-120b">gpt-oss-120b</option>
+                                <option value="gpt-4">GPT-4 (Recommended)</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <option value="gpt-4o">GPT-4o</option>
+                                <option value="gpt-4o-mini">GPT-4o Mini</option>
                             </select>
                         </div>
                     </div>
@@ -610,7 +612,10 @@ const response = await fetch('<span class="worker-url-placeholder">[WORKER_URL]<
   body: JSON.stringify({
     model: 'gpt-4',
     messages: [
-      { role: 'user', content: 'Explain quantum computing' }
+      { 
+        role: 'user', 
+        content: 'Explain quantum computing' 
+      }
     ],
     max_tokens: 500,
     temperature: 0.7
@@ -635,7 +640,10 @@ response = requests.post(
     json={
         'model': 'gpt-4',
         'messages': [
-            {'role': 'user', 'content': 'Explain quantum computing'}
+            {
+                'role': 'user', 
+                'content': 'Explain quantum computing'
+            }
         ],
         'max_tokens': 500,
         'temperature': 0.7
@@ -653,7 +661,9 @@ curl -X POST <span class="worker-url-placeholder">[WORKER_URL]</span>/v1/chat/co
   -H "Authorization: Bearer YOUR_WORKER_API_KEY" \
   -d '{
     "model": "gpt-4",
-    "messages": [{"role": "user", "content": "Hello!"}],
+    "messages": [
+      {"role": "user", "content": "Hello!"}
+    ],
     "max_tokens": 100
   }'
                 </div>
@@ -687,9 +697,10 @@ Authorization: Bearer YOUR_WORKER_API_KEY
     <script>
         let currentEndpoint = null;
         let chatHistory = [];
+        let availableModels = [];
 
-        // Update worker URL on page load
-        document.addEventListener('DOMContentLoaded', function() {
+        // Load available models on page load
+        document.addEventListener('DOMContentLoaded', async function() {
             try {
                 const currentOrigin = location.origin;
                 const curlExample = document.getElementById('curl-example');
@@ -699,10 +710,134 @@ Authorization: Bearer YOUR_WORKER_API_KEY
                 document.querySelectorAll('.worker-url-placeholder').forEach(el => {
                     el.textContent = currentOrigin;
                 });
+                
+                // Load models in background (without requiring API key for UI setup)
+                await loadAvailableModels();
             } catch (error) {
-                console.log('Could not update worker URL:', error);
+                console.log('Could not update worker URL or load models:', error);
             }
         });
+
+        async function loadAvailableModels() {
+            try {
+                // Try to load models without auth first (will fail but we handle gracefully)
+                const response = await fetch('/v1/models');
+                if (response.status === 401) {
+                    // Expected - no auth provided, but endpoint exists
+                    console.log('Models endpoint available, auth required');
+                    return;
+                }
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableModels = data.data || [];
+                    updateModelSelectors();
+                }
+            } catch (error) {
+                console.log('Models endpoint not available yet:', error);
+            }
+        }
+
+        async function loadModelsWithAuth(apiKey) {
+            if (!apiKey) return;
+            
+            try {
+                const response = await fetch('/v1/models', {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableModels = data.data || [];
+                    updateModelSelectors();
+                    
+                    // Show models info in UI
+                    showModelsInfo(data);
+                }
+            } catch (error) {
+                console.log('Error loading models:', error);
+            }
+        }
+
+        function updateModelSelectors() {
+            const selectors = ['chat-model', 'test-model', 'completion-model'];
+            
+            selectors.forEach(selectorId => {
+                const selector = document.getElementById(selectorId);
+                if (selector && availableModels.length > 0) {
+                    // Keep current selection if it exists
+                    const currentValue = selector.value;
+                    
+                    // Clear and populate
+                    selector.innerHTML = '';
+                    
+                    // Add default options first (for compatibility)
+                    const defaultOptions = [
+                        { id: 'gpt-4', name: 'GPT-4 (Recommended)' },
+                        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+                        { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
+                        { id: 'gpt-4o', name: 'GPT-4o' },
+                        { id: 'gpt-4o-mini', name: 'GPT-4o Mini' }
+                    ];
+                    
+                    defaultOptions.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt.id;
+                        option.textContent = opt.name;
+                        selector.appendChild(option);
+                    });
+                    
+                    // Add separator
+                    if (availableModels.length > 5) {
+                        const separator = document.createElement('option');
+                        separator.disabled = true;
+                        separator.textContent = '─────── Available Models ───────';
+                        selector.appendChild(separator);
+                    }
+                    
+                    // Add discovered models
+                    availableModels.forEach(model => {
+                        // Skip if already in defaults
+                        if (!defaultOptions.find(opt => opt.id === model.id)) {
+                            const option = document.createElement('option');
+                            option.value = model.id;
+                            option.textContent = `${model.id} ${model.owned_by ? `(${model.owned_by})` : ''}`;
+                            if (model.description) {
+                                option.title = model.description;
+                            }
+                            selector.appendChild(option);
+                        }
+                    });
+                    
+                    // Restore selection if it exists
+                    if (currentValue) {
+                        selector.value = currentValue;
+                    }
+                }
+            });
+        }
+
+        function showModelsInfo(data) {
+            // Add models info to the UI when loaded
+            const modelCount = data.data ? data.data.length : 0;
+            const coreApiModels = data.data ? data.data.filter(m => m.owned_by === 'cloudflare').length : 0;
+            
+            // Update connection status area with models info
+            const statusArea = document.querySelector('#tester .api-tester:first-child');
+            if (statusArea && !document.getElementById('models-info')) {
+                const modelsInfo = document.createElement('div');
+                modelsInfo.id = 'models-info';
+                modelsInfo.innerHTML = `
+                    <div class="alert info" style="margin-top: 15px;">
+                        <strong>📊 Models Loaded:</strong> ${modelCount} total 
+                        ${coreApiModels > 7 ? `(${coreApiModels} from Core API + compatibility layers)` : '(fallback mode)'}
+                    </div>
+                `;
+                statusArea.appendChild(modelsInfo);
+            }
+        }
 
         function showSection(sectionId) {
             // Hide all sections
@@ -758,6 +893,9 @@ Authorization: Bearer YOUR_WORKER_API_KEY
                 if (response.ok) {
                     statusIndicator.className = 'status-indicator connected';
                     statusText.textContent = 'Connected';
+                    
+                    // Load models with the valid API key
+                    await loadModelsWithAuth(apiKey);
                 } else {
                     statusIndicator.className = 'status-indicator disconnected';
                     statusText.textContent = 'Authentication Failed';
@@ -774,6 +912,19 @@ Authorization: Bearer YOUR_WORKER_API_KEY
             const statusText = document.getElementById('connection-text');
             statusIndicator.className = 'status-indicator disconnected';
             statusText.textContent = 'Not Connected';
+            
+            // Clear models info
+            const modelsInfo = document.getElementById('models-info');
+            if (modelsInfo) {
+                modelsInfo.remove();
+            }
+        }
+
+        async function onChatApiKeyChange() {
+            const apiKey = document.getElementById('chat-api-key').value;
+            if (apiKey && apiKey.length > 10) {
+                await loadModelsWithAuth(apiKey);
+            }
         }
 
         function selectEndpoint(endpoint) {
@@ -831,8 +982,10 @@ Authorization: Bearer YOUR_WORKER_API_KEY
                         <div class="form-group">
                             <label for="completion-model">Model:</label>
                             <select id="completion-model">
-                                <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-                                <option value="gpt-4">gpt-4</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-4o">GPT-4o</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -915,38 +1068,57 @@ Authorization: Bearer YOUR_WORKER_API_KEY
                 });
 
                 if (stream) {
-                    responseArea.innerHTML = '<div class="alert success">✅ Streaming response:</div><div class="json-viewer" id="stream-output"></div>';
+                    responseArea.innerHTML = '<div class="alert success">✅ Streaming response:</div><div class="json-viewer" id="stream-output">Connecting...</div>';
                     const streamOutput = document.getElementById('stream-output');
                     
+                    if (!response.body) {
+                        throw new Error('Streaming not supported by browser');
+                    }
+                    
                     const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
+                    const decoder = new TextDecoder('utf-8');
+                    let buffer = '';
                     let fullResponse = '';
 
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
 
-                        const chunk = decoder.decode(value);
-                        const lines = chunk.split('\n').filter(line => line.trim());
+                            buffer += decoder.decode(value, { stream: true });
+                            const lines = buffer.split('\n');
+                            
+                            // Keep the last incomplete line in buffer
+                            buffer = lines.pop() || '';
 
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const data = line.slice(6);
-                                if (data === '[DONE]') {
-                                    streamOutput.textContent = fullResponse;
-                                    break;
-                                }
-
-                                try {
-                                    const json = JSON.parse(data);
-                                    const content = json.choices[0]?.delta?.content;
-                                    if (content) {
-                                        fullResponse += content;
-                                        streamOutput.textContent = fullResponse + '▋';
+                            for (const line of lines) {
+                                if (line.trim() === '') continue;
+                                
+                                if (line.startsWith('data: ')) {
+                                    const data = line.slice(6).trim();
+                                    
+                                    if (data === '[DONE]') {
+                                        streamOutput.textContent = fullResponse || 'Stream completed';
+                                        break;
                                     }
-                                } catch (e) {}
+
+                                    try {
+                                        const json = JSON.parse(data);
+                                        const content = json.choices?.[0]?.delta?.content;
+                                        if (content) {
+                                            fullResponse += content;
+                                            streamOutput.textContent = fullResponse + '▋';
+                                        }
+                                    } catch (parseError) {
+                                        console.log('Parse error for chunk:', data);
+                                    }
+                                }
                             }
                         }
+                    } finally {
+                        reader.releaseLock();
+                        // Remove cursor
+                        streamOutput.textContent = fullResponse || 'No content received';
                     }
                 } else {
                     const data = await response.json();
@@ -1077,34 +1249,55 @@ Authorization: Bearer YOUR_WORKER_API_KEY
                     assistantContent.textContent = '';
                     let fullResponse = '';
                     
+                    if (!response.body) {
+                        throw new Error('Streaming not supported');
+                    }
+                    
                     const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
+                    const decoder = new TextDecoder('utf-8');
+                    let buffer = '';
 
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
 
-                        const chunk = decoder.decode(value);
-                        const lines = chunk.split('\n').filter(line => line.trim());
+                            buffer += decoder.decode(value, { stream: true });
+                            const lines = buffer.split('\n');
+                            
+                            // Keep the last incomplete line in buffer
+                            buffer = lines.pop() || '';
 
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const data = line.slice(6);
-                                if (data === '[DONE]') {
-                                    chatHistory.push({ role: 'assistant', content: fullResponse });
-                                    break;
-                                }
-
-                                try {
-                                    const json = JSON.parse(data);
-                                    const content = json.choices[0]?.delta?.content;
-                                    if (content) {
-                                        fullResponse += content;
+                            for (const line of lines) {
+                                if (line.trim() === '') continue;
+                                
+                                if (line.startsWith('data: ')) {
+                                    const data = line.slice(6).trim();
+                                    
+                                    if (data === '[DONE]') {
+                                        chatHistory.push({ role: 'assistant', content: fullResponse });
                                         assistantContent.textContent = fullResponse;
-                                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                                        break;
                                     }
-                                } catch (e) {}
+
+                                    try {
+                                        const json = JSON.parse(data);
+                                        const content = json.choices?.[0]?.delta?.content;
+                                        if (content) {
+                                            fullResponse += content;
+                                            assistantContent.textContent = fullResponse;
+                                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                                        }
+                                    } catch (parseError) {
+                                        console.log('Parse error for chat chunk:', data);
+                                    }
+                                }
                             }
+                        }
+                    } finally {
+                        reader.releaseLock();
+                        if (fullResponse) {
+                            chatHistory.push({ role: 'assistant', content: fullResponse });
                         }
                     }
                 } else {
