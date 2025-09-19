@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AI Provider Test - OpenAI Compatible API</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-section {
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 25px 0;
+            background: #f9f9f9;
+        }
+
+        .form-group {
+            margin: 20px 0;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-row.single {
+            grid-template-columns: 1fr;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        select,
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        select:focus,
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 8px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #5a67d8;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        button.secondary:hover {
+            background: #5a6268;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .provider-group {
+            display: none;
+        }
+
+        .provider-group.visible {
+            display: block;
+        }
+
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .chat-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            margin: 20px 0;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            margin-left: 20px;
+        }
+
+        .message.assistant {
+            background: #f1f8e9;
+            margin-right: 20px;
+        }
+
+        .message .role {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚀 Enhanced AI Provider Test</h1>
+        <p>Test the multi-provider AI API with proper model switching logic.</p>
+
+        <div class="test-section">
+            <h2>🔐 Configuration</h2>
+
+            <div class="form-row single">
+                <div class="form-group">
+                    <label for="api-key">API Key:</label>
+                    <input type="password" id="api-key" placeholder="Enter your worker API key">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="ai-provider">AI Provider:</label>
+                    <select id="ai-provider" onchange="onProviderChange()">
+                        <option value="">Choose AI Provider...</option>
+                        <option value="cloudflare">Cloudflare AI</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                    </select>
+                </div>
+
+                <div class="form-group provider-group" id="cloudflare-provider-group">
+                    <label for="cloudflare-provider">Cloudflare Provider:</label>
+                    <select id="cloudflare-provider" onchange="onCloudflareProviderChange()">
+                        <option value="">Choose provider...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row single">
+                <div class="form-group">
+                    <label for="model-select">Model:</label>
+                    <select id="model-select">
+                        <option value="">Choose model...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <button onclick="testConnection()">Test Connection</button>
+                <button onclick="loadModels()">Load Models</button>
+                <button onclick="clearResults()" class="secondary">Clear</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>💬 Chat Test</h2>
+            
+            <div class="chat-container" id="chat-messages">
+                <div class="message assistant">
+                    <div class="role">Assistant</div>
+                    <div>Ready to chat! Select a provider and model above, then enter your message.</div>
+                </div>
+            </div>
+
+            <div class="form-row single">
+                <div class="form-group">
+                    <label for="chat-input">Your Message:</label>
+                    <textarea id="chat-input" placeholder="Type your message here..." 
+                              onkeypress="handleChatKeyPress(event)" rows="3"></textarea>
+                </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <button onclick="sendChatMessage()" id="send-btn">Send Message</button>
+                <label style="display: flex; align-items: center; gap: 5px; margin: 0;">
+                    <input type="checkbox" id="stream-chat"> Enable Streaming
+                </label>
+                <button onclick="clearChat()" class="secondary">Clear Chat</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Results & Status</h2>
+            <div id="status"></div>
+            <pre id="response-data"></pre>
+        </div>
+
+        <div class="test-section">
+            <h2>🔍 Debug Information</h2>
+            <pre id="debug-info"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentProvider = '';
+        let availableModels = [];
+        let cloudflareProviders = {};
+        let openaiModels = [];
+        let geminiModels = [];
+        let apiKey = '';
+        let chatHistory = [];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function () {
+            updateDebugInfo();
+        });
+
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+
+        function showResponse(data) {
+            const responseEl = document.getElementById('response-data');
+            responseEl.textContent = JSON.stringify(data, null, 2);
+        }
+
+        function updateDebugInfo() {
+            const debugEl = document.getElementById('debug-info');
+            const debugData = {
+                currentProvider,
+                apiKey: apiKey ? '***' + apiKey.slice(-4) : 'Not set',
+                totalModels: availableModels.length,
+                cloudflareProviders: Object.keys(cloudflareProviders).length,
+                openaiModels: openaiModels.length,
+                geminiModels: geminiModels.length,
+                selectedProvider: document.getElementById('cloudflare-provider')?.value || 'None',
+                selectedModel: document.getElementById('model-select')?.value || 'None',
+                chatHistoryLength: chatHistory.length
+            };
+            debugEl.textContent = JSON.stringify(debugData, null, 2);
+        }
+
+        function onProviderChange() {
+            currentProvider = document.getElementById('ai-provider').value;
+            const providerGroup = document.getElementById('cloudflare-provider-group');
+            const modelSelect = document.getElementById('model-select');
+
+            // Clear model selection
+            modelSelect.innerHTML = '<option value="">Choose model...</option>';
+
+            // Show/hide Cloudflare provider dropdown
+            if (currentProvider === 'cloudflare') {
+                providerGroup.classList.add('visible');
+            } else {
+                providerGroup.classList.remove('visible');
+            }
+
+            updateDebugInfo();
+            showStatus(`Provider changed to: ${currentProvider || 'None'}`);
+
+            // Auto-load models if API key is set
+            apiKey = document.getElementById('api-key').value;
+            if (apiKey && currentProvider) {
+                setTimeout(loadModels, 100);
+            }
+        }
+
+        function onCloudflareProviderChange() {
+            if (currentProvider !== 'cloudflare') return;
+
+            const provider = document.getElementById('cloudflare-provider').value;
+            const modelSelect = document.getElementById('model-select');
+
+            // Clear and populate models for selected provider
+            modelSelect.innerHTML = '<option value="">Choose model...</option>';
+
+            if (provider && cloudflareProviders[provider]) {
+                const models = cloudflareProviders[provider];
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id || model.name;
+                    option.textContent = (model.id || model.name) + (model.description ? ` - ${model.description.substring(0, 50)}...` : '');
+                    modelSelect.appendChild(option);
+                });
+                showStatus(`Loaded ${models.length} models for provider: ${provider}`, 'success');
+            }
+
+            updateDebugInfo();
+        }
+
+        async function testConnection() {
+            apiKey = document.getElementById('api-key').value;
+
+            if (!apiKey) {
+                showStatus('Please enter an API key', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/health', {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('Connection successful! 🎉', 'success');
+                    showResponse(data);
+                } else {
+                    showStatus(`Connection failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`Connection error: ${error.message}`, 'error');
+            }
+
+            updateDebugInfo();
+        }
+
+        async function loadModels() {
+            apiKey = document.getElementById('api-key').value;
+            currentProvider = document.getElementById('ai-provider').value;
+
+            if (!apiKey) {
+                showStatus('Please enter an API key', 'error');
+                return;
+            }
+
+            if (!currentProvider) {
+                showStatus('Please select a provider', 'error');
+                return;
+            }
+
+            showStatus('Loading models...', 'info');
+
+            try {
+                let endpoint = '/v1/models';
+                let queryParam = '';
+
+                // Determine the correct endpoint based on provider
+                switch (currentProvider) {
+                    case 'gemini':
+                        queryParam = '?provider=gemini';
+                        break;
+                    case 'openai':
+                        queryParam = '?provider=openai';
+                        break;
+                    case 'cloudflare':
+                        // Load all models, then categorize by provider
+                        break;
+                }
+
+                const response = await fetch(endpoint + queryParam, {
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                availableModels = data.data || data.models || [];
+
+                if (currentProvider === 'cloudflare') {
+                    await processCloudflareModels();
+                } else if (currentProvider === 'openai') {
+                    processOpenAIModels();
+                } else if (currentProvider === 'gemini') {
+                    processGeminiModels();
+                }
+
+                showStatus(`Loaded ${availableModels.length} models for ${currentProvider}`, 'success');
+                showResponse(data);
+
+            } catch (error) {
+                showStatus(`Failed to load models: ${error.message}`, 'error');
+                console.error('Load models error:', error);
+            }
+
+            updateDebugInfo();
+        }
+
+        async function processCloudflareModels() {
+            // Reset cloudflare providers
+            cloudflareProviders = {};
+            
+            // Also try to load from the sample JSON file for additional model info
+            try {
+                const sampleResponse = await fetch('/cloudflare_ai_models.json');
+                if (sampleResponse.ok) {
+                    const sampleData = await sampleResponse.json();
+                    
+                    // Extract providers from the sample data structure
+                    if (sampleData.providers) {
+                        Object.entries(sampleData.providers).forEach(([providerName, models]) => {
+                            if (Array.isArray(models)) {
+                                // Filter only text generation models
+                                const textGenModels = models.filter(model => 
+                                    model.task && model.task.name === 'Text Generation'
+                                );
+                                if (textGenModels.length > 0) {
+                                    cloudflareProviders[providerName] = textGenModels;
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load sample Cloudflare models data:', e);
+            }
+
+            // Also categorize the models from the API response
+            availableModels.forEach(model => {
+                const id = model.id || model.name || '';
+                if (id.startsWith('@cf/')) {
+                    const parts = id.substring(4).split('/');
+                    if (parts.length > 1) {
+                        const providerName = parts[0];
+                        if (!cloudflareProviders[providerName]) {
+                            cloudflareProviders[providerName] = [];
+                        }
+                        // Avoid duplicates
+                        const exists = cloudflareProviders[providerName].some(m => (m.id || m.name) === id);
+                        if (!exists) {
+                            cloudflareProviders[providerName].push(model);
+                        }
+                    }
+                }
+            });
+
+            // Populate Cloudflare provider dropdown
+            const providerSelect = document.getElementById('cloudflare-provider');
+            providerSelect.innerHTML = '<option value="">Choose provider...</option>';
+
+            Object.keys(cloudflareProviders).sort().forEach(providerName => {
+                const option = document.createElement('option');
+                option.value = providerName;
+                option.textContent = `${providerName} (${cloudflareProviders[providerName].length} models)`;
+                providerSelect.appendChild(option);
+            });
+        }
+
+        function processOpenAIModels() {
+            openaiModels = availableModels.filter(model => {
+                const owner = (model.owner || '').toLowerCase();
+                const id = (model.id || '').toLowerCase();
+                return owner.includes('openai') || id.includes('gpt') || id.includes('text-') || id.includes('code-');
+            });
+
+            populateModelDropdown(openaiModels);
+        }
+
+        function processGeminiModels() {
+            geminiModels = availableModels.filter(model => {
+                const owner = (model.owner || '').toLowerCase();
+                const id = (model.id || '').toLowerCase();
+                return owner.includes('google') || owner.includes('gemini') || id.includes('gemini');
+            });
+
+            populateModelDropdown(geminiModels);
+        }
+
+        function populateModelDropdown(models) {
+            const modelSelect = document.getElementById('model-select');
+            modelSelect.innerHTML = '<option value="">Choose model...</option>';
+
+            models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.id || model.name;
+                option.textContent = model.id || model.name;
+                modelSelect.appendChild(option);
+            });
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            const model = document.getElementById('model-select').value;
+            const streaming = document.getElementById('stream-chat').checked;
+
+            if (!message) {
+                showStatus('Please enter a message', 'error');
+                return;
+            }
+
+            if (!apiKey || !model) {
+                showStatus('Please set API key and select a model', 'error');
+                return;
+            }
+
+            // Add user message to chat
+            addChatMessage('user', message);
+            input.value = '';
+
+            // Show loading
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="loading"></span>Sending...';
+
+            try {
+                const response = await fetch('/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: chatHistory,
+                        stream: streaming,
+                        max_tokens: 1000,
+                        temperature: 0.7
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                if (streaming) {
+                    await handleStreamingResponse(response);
+                } else {
+                    const data = await response.json();
+                    const assistantMessage = data.choices?.[0]?.message?.content || 'No response';
+                    addChatMessage('assistant', assistantMessage);
+                    showResponse(data);
+                }
+
+            } catch (error) {
+                showStatus(`Chat error: ${error.message}`, 'error');
+                addChatMessage('assistant', `Error: ${error.message}`);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = 'Send Message';
+            }
+        }
+
+        async function handleStreamingResponse(response) {
+            const reader = response.body.getReader();
+            let assistantMessage = '';
+            let messageDiv = null;
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = new TextDecoder().decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+                                const delta = data.choices?.[0]?.delta?.content;
+                                
+                                if (delta) {
+                                    assistantMessage += delta;
+                                    
+                                    // Create or update message div
+                                    if (!messageDiv) {
+                                        messageDiv = addChatMessage('assistant', assistantMessage);
+                                    } else {
+                                        messageDiv.querySelector('div:last-child').textContent = assistantMessage;
+                                    }
+                                    
+                                    // Scroll to bottom
+                                    const chatContainer = document.getElementById('chat-messages');
+                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                }
+                            } catch (e) {
+                                console.warn('Failed to parse streaming chunk:', e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Streaming error:', error);
+                showStatus(`Streaming error: ${error.message}`, 'error');
+            }
+
+            // Update chat history
+            if (assistantMessage) {
+                chatHistory.push({ role: 'assistant', content: assistantMessage });
+                updateDebugInfo();
+            }
+        }
+
+        function addChatMessage(role, content) {
+            const chatContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const roleDiv = document.createElement('div');
+            roleDiv.className = 'role';
+            roleDiv.textContent = role === 'user' ? 'You' : 'Assistant';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(roleDiv);
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            
+            // Update chat history
+            chatHistory.push({ role, content });
+            
+            // Scroll to bottom
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            updateDebugInfo();
+            return messageDiv;
+        }
+
+        function clearChat() {
+            const chatContainer = document.getElementById('chat-messages');
+            chatContainer.innerHTML = `
+                <div class="message assistant">
+                    <div class="role">Assistant</div>
+                    <div>Chat cleared! Ready for a new conversation.</div>
+                </div>
+            `;
+            chatHistory = [];
+            updateDebugInfo();
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                sendChatMessage();
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('status').textContent = '';
+            document.getElementById('response-data').textContent = '';
+            availableModels = [];
+            cloudflareProviders = {};
+            openaiModels = [];
+            geminiModels = [];
+
+            // Clear dropdowns
+            document.getElementById('ai-provider').selectedIndex = 0;
+            document.getElementById('cloudflare-provider').innerHTML = '<option value="">Choose provider...</option>';
+            document.getElementById('model-select').innerHTML = '<option value="">Choose model...</option>';
+            document.getElementById('cloudflare-provider-group').classList.remove('visible');
+
+            currentProvider = '';
+            clearChat();
+            updateDebugInfo();
+            showStatus('Cleared all results', 'info');
+        }
+    </script>
+</body>
+
+</html>

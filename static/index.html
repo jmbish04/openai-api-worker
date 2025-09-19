@@ -348,6 +348,129 @@
             background: #007bff;
         }
 
+        .test-results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .test-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #6c757d;
+        }
+
+        .status-indicator.pass {
+            background: #28a745;
+        }
+
+        .status-indicator.fail {
+            background: #dc3545;
+        }
+
+        .status-indicator.pending {
+            background: #ffc107;
+        }
+
+        .test-details {
+            display: grid;
+            gap: 15px;
+        }
+
+        .test-item {
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            background: white;
+        }
+
+        .test-item.pass {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .test-item.fail {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .test-item.pending {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .test-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .test-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .test-status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .test-status-badge.pass {
+            background: #28a745;
+            color: white;
+        }
+
+        .test-status-badge.fail {
+            background: #dc3545;
+            color: white;
+        }
+
+        .test-status-badge.pending {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .test-message {
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .test-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9rem;
+        }
+
+        .test-stat {
+            display: flex;
+            align-items: center;
+        }
+
+        .test-stat-label {
+            font-weight: 600;
+            margin-right: 5px;
+        }
+
+        .test-stat-value {
+            color: #007bff;
+            font-weight: bold;
+        }
+
         .loading {
             display: inline-block;
             width: 20px;
@@ -431,6 +554,7 @@
                 <div class="nav-item active" onclick="showSection('overview')">📖 Overview</div>
                 <div class="nav-item" onclick="showSection('tester')">🧪 API Tester</div>
                 <div class="nav-item" onclick="showSection('chat')">💬 Chat Interface</div>
+                <div class="nav-item" onclick="showSection('test')">🔍 API Tests</div>
                 <div class="nav-item" onclick="showSection('endpoints')">🔗 Endpoints</div>
                 <div class="nav-item" onclick="showSection('examples')">💡 Examples</div>
                 <div class="nav-item" onclick="showSection('auth')">🔐 Authentication</div>
@@ -439,15 +563,16 @@
             <div id="overview" class="section active">
                 <h2>🌟 Welcome to OpenAI API Worker</h2>
                 <p>This Cloudflare Worker provides a fully OpenAI-compatible API interface powered by Cloudflare's AI
-                    models. Get the performance of edge computing with the familiarity of OpenAI's API.</p>
+                    models, OpenAI, and Google Gemini. Get the performance of edge computing with the familiarity of OpenAI's API.</p>
 
                 <h3>✨ Key Features</h3>
                 <ul style="margin-left: 20px; margin-top: 10px;">
-                    <li><strong>OpenAI Compatible:</strong> Drop-in replacement for OpenAI API</li>
+                    <li><strong>Multi-Provider Support:</strong> Cloudflare AI, OpenAI, and Google Gemini</li>
+                    <li><strong>Structured Responses:</strong> JSON schema validation for reliable data extraction</li>
+                    <li><strong>Memory System:</strong> KV-based conversation memory with keyword isolation</li>
                     <li><strong>Edge Performance:</strong> Powered by Cloudflare's global network</li>
-                    <li><strong>Multimodal Support:</strong> Text generation and image recognition</li>
                     <li><strong>Streaming Responses:</strong> Real-time response streaming</li>
-                    <li><strong>Multiple Models:</strong> Primary and backup model support</li>
+                    <li><strong>Multiple Endpoints:</strong> Standard, structured, and text-only endpoints</li>
                     <li><strong>CORS Enabled:</strong> Ready for web applications</li>
                 </ul>
 
@@ -496,30 +621,25 @@
                         <div class="form-group full-width">
                             <label for="ai-service">AI Service:</label>
                             <select id="ai-service" onchange="onAIServiceChange()">
-                                <option value="cloudflare">Cloudflare (edge)</option>
+                                <option value="">Choose AI Service...</option>
+                                <option value="cloudflare">Cloudflare AI</option>
                                 <option value="openai">OpenAI</option>
-                                <option value="gemini">Gemini</option>
+                                <option value="gemini">Google Gemini</option>
                             </select>
                         </div>
 
-                        <div id="openai-controls" class="form-group" style="display:none">
-                            <label for="openai-model-select">OpenAI Model:</label>
-                            <select id="openai-model-select"></select>
-                        </div>
-
-                        <div id="gemini-controls" class="form-group" style="display:none">
-                            <label for="gemini-model-select">Gemini Model:</label>
-                            <select id="gemini-model-select"></select>
-                        </div>
-
-                        <div id="cloudflare-controls" class="form-group full-width">
+                        <div id="cloudflare-controls" class="form-group full-width" style="display:none">
                             <label for="cloudflare-provider-select">Cloudflare Provider:</label>
-                            <select id="cloudflare-provider-select" onchange="onCloudflareProviderChange()"></select>
+                            <select id="cloudflare-provider-select" onchange="onCloudflareProviderChange()">
+                                <option value="">Choose provider...</option>
+                            </select>
                         </div>
 
-                        <div id="cloudflare-model-controls" class="form-group full-width">
-                            <label for="cloudflare-model-select">Cloudflare Model:</label>
-                            <select id="cloudflare-model-select"></select>
+                        <div id="model-controls" class="form-group full-width" style="display:none">
+                            <label for="model-select">Model:</label>
+                            <select id="model-select">
+                                <option value="">Choose model...</option>
+                            </select>
                         </div>
                     </div>
                     <button class="btn" onclick="testConnection()">Test Connection</button>
@@ -569,15 +689,28 @@
                                 onchange="onChatApiKeyChange()">
                         </div>
                         <div class="form-group">
-                            <label for="chat-model">Model:</label>
-                            <select id="chat-model">
-                                <option value="gpt-4">GPT-4 (Recommended)</option>
-                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                                <option value="gpt-4o">GPT-4o</option>
-                                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                            <label for="chat-ai-service">AI Service:</label>
+                            <select id="chat-ai-service" onchange="onChatAIServiceChange()">
+                                <option value="">Choose AI Service...</option>
+                                <option value="cloudflare">Cloudflare AI</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="gemini">Google Gemini</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div id="chat-cloudflare-controls" class="form-group full-width" style="display:none">
+                        <label for="chat-cloudflare-provider">Cloudflare Provider:</label>
+                        <select id="chat-cloudflare-provider" onchange="onChatCloudflareProviderChange()">
+                            <option value="">Choose provider...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="chat-model">Model:</label>
+                        <select id="chat-model">
+                            <option value="">Choose model...</option>
+                        </select>
                     </div>
 
                     <div class="chat-container" id="chat-messages">
@@ -599,6 +732,29 @@
                             <input type="checkbox" id="stream-chat"> Enable Streaming
                         </label>
                         <button class="btn secondary" onclick="clearChat()">Clear Chat</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="test" class="section">
+                <h2>🔍 API Connection Tests</h2>
+                <p>Test the connectivity and functionality of all external API integrations.</p>
+
+                <div class="api-tester">
+                    <div class="form-group">
+                        <button class="btn" onclick="runAPITests()">🔄 Run All Tests</button>
+                        <button class="btn secondary" onclick="clearTestResults()">Clear Results</button>
+                    </div>
+
+                    <div id="test-results" class="test-results">
+                        <div class="test-status">
+                            <div class="status-indicator" id="test-status-indicator"></div>
+                            <span id="test-status-text">Ready to test</span>
+                        </div>
+                        
+                        <div id="test-details" class="test-details">
+                            <!-- Test results will be populated here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -629,13 +785,25 @@
                 <div class="endpoint-card">
                     <div class="endpoint-method post">POST</div>
                     <h4>/v1/chat/completions</h4>
-                    <p>Create chat completions with support for streaming and multimodal inputs</p>
+                    <p>Create chat completions with optional memory support and response formatting</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-method post">POST</div>
+                    <h4>/v1/chat/completions/structured</h4>
+                    <p>Create structured chat completions with JSON schema validation (requires response_format.schema)</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-method post">POST</div>
+                    <h4>/v1/chat/completions/text</h4>
+                    <p>Create text-only chat completions without structured output (memory support available)</p>
                 </div>
 
                 <div class="endpoint-card">
                     <div class="endpoint-method">GET</div>
                     <h4>/v1/models</h4>
-                    <p>List all available models and their capabilities</p>
+                    <p>List all available models from all providers (Cloudflare AI, OpenAI, Google Gemini)</p>
                 </div>
 
                 <div class="endpoint-card">
@@ -752,6 +920,8 @@ print(response.json()['choices'][0]['message']['content'])
         let chatHistory = [];
         let availableModels = []; // full /v1/models response
         let cloudflareProviders = {}; // provider -> [models]
+        let openaiModels = []; // OpenAI models
+        let geminiModels = []; // Gemini models
 
         // Utility: escape HTML for safe insertion
         function escapeHtml(str) {
@@ -804,15 +974,24 @@ print(response.json()['choices'][0]['message']['content'])
                 // Wire initial UI events
                 document.getElementById('ai-service').addEventListener('change', onAIServiceChange);
                 document.getElementById('cloudflare-provider-select').addEventListener('change', onCloudflareProviderChange);
-                document.getElementById('global-api-key').addEventListener('change', async () => await loadModelsWithAuth(document.getElementById('global-api-key').value));
+                document.getElementById('chat-ai-service').addEventListener('change', onChatAIServiceChange);
+                document.getElementById('chat-cloudflare-provider').addEventListener('change', onChatCloudflareProviderChange);
+                document.getElementById('global-api-key').addEventListener('change', () => testConnection());
                 document.getElementById('chat-api-key').addEventListener('change', onChatApiKeyChange);
+
+                // Handle API key from URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const apiKeyFromUrl = urlParams.get('apiKey');
+                if (apiKeyFromUrl) {
+                    document.getElementById('global-api-key').value = apiKeyFromUrl;
+                    document.getElementById('chat-api-key').value = apiKeyFromUrl;
+                    await testConnection(); // Automatically test connection
+                }
 
                 // Handle hash routing
                 window.addEventListener('hashchange', handleHashChange);
                 handleHashChange(); // Handle initial hash
 
-                // Chat key: update model selectors when changed
-                await loadAvailableModels();
                 onAIServiceChange();
             } catch (error) {
                 console.log('Initialization error:', error);
@@ -829,197 +1008,202 @@ print(response.json()['choices'][0]['message']['content'])
             }
         }
 
-        // Load models without auth (public /v1/models) to populate Cloudflare providers
-        async function loadAvailableModels() {
-            try {
-                const res = await fetch('/v1/models');
-                if (!res.ok) {
-                    console.warn('/v1/models returned', res.status);
-                    return;
-                }
-                const data = await res.json();
-                availableModels = data.data || data.models || [];
-
-                // Derive Cloudflare providers heuristically from model ids
-                cloudflareProviders = {};
-                availableModels.forEach(m => {
-                    const id = m.id || m.name || '';
-                    // look for patterns like '@cf/<provider>/' or '@cf/<provider>' or '/cf-<provider>/'
-                    let providerMatch = null;
-                    if (id.includes('@cf/')) {
-                        const parts = id.split('@cf/')[1].split('/');
-                        providerMatch = parts[0];
-                    } else if (/@cf:/.test(id)) {
-                        providerMatch = id.split('@cf:')[1].split('/')[0];
-                    } else if (id.includes('/@cf/')) {
-                        providerMatch = id.split('/@cf/')[1].split('/')[0];
-                    }
-
-                    if (providerMatch) {
-                        cloudflareProviders[providerMatch] = cloudflareProviders[providerMatch] || [];
-                        cloudflareProviders[providerMatch].push(m);
-                    }
-                });
-
-                // Populate cloudflare provider select
-                const providerSelect = document.getElementById('cloudflare-provider-select');
-                providerSelect.innerHTML = '';
-                const noneOption = document.createElement('option');
-                noneOption.value = '';
-                noneOption.textContent = '(Choose provider)';
-                providerSelect.appendChild(noneOption);
-                Object.keys(cloudflareProviders).forEach(p => {
-                    const o = document.createElement('option');
-                    o.value = p;
-                    o.textContent = p;
-                    providerSelect.appendChild(o);
-                });
-
-                // If there's at least one provider, preselect the first
-                if (!providerSelect.value && providerSelect.options.length > 1) providerSelect.selectedIndex = 1;
-                onCloudflareProviderChange();
-                updateModelSelectors();
-            } catch (err) {
-                console.log('Models endpoint not available yet:', err);
-            }
-        }
-
-        // Load models via /v1/models using a provided API key (used for OpenAI/Gemini when user supplies their key)
-        async function loadModelsWithAuth(apiKey) {
+        // Load and categorize models from /v1/models using an API key
+        async function loadAndCategorizeModels(apiKey) {
             if (!apiKey) return;
             try {
                 const res = await fetch('/v1/models', {
-                    headers: {
-                        'Authorization': 'Bearer ' + apiKey
-                    }
+                    headers: { 'Authorization': 'Bearer ' + apiKey }
                 });
-                if (!res.ok) {
-                    console.warn('Authenticated /v1/models returned', res.status);
-                    return;
-                }
-                const data = await res.json();
-                const models = data.data || data.models || [];
 
-                // Heuristics: split models into OpenAI-like and Gemini-like sets
+                if (!res.ok) {
+                    console.warn('/v1/models returned', res.status);
+                    throw new Error('Failed to fetch models: ' + res.status);
+                }
+
+                const data = await res.json();
+                availableModels = data.data || data.models || [];
+
+                // Reset and categorize
+                cloudflareProviders = {};
                 const openaiList = [];
                 const geminiList = [];
-                models.forEach(m => {
+
+                availableModels.forEach(m => {
                     const id = (m.id || m.name || '').toLowerCase();
                     const owner = (m.owner || '').toLowerCase();
-                    if (id.includes('gpt') || owner.includes('openai') || id.startsWith('text-') || id.startsWith('oai-')) {
-                        openaiList.push(m);
-                    } else if (id.includes('gemini') || owner.includes('google') || owner.includes('google-research')) {
+
+                    // Cloudflare provider categorization
+                    let providerMatch = null;
+                    if (id.startsWith('@cf/')) {
+                        const parts = id.substring(4).split('/');
+                        if (parts.length > 1) {
+                            providerMatch = parts[0];
+                        }
+                    }
+
+                    if (providerMatch) {
+                        if (!cloudflareProviders[providerMatch]) {
+                            cloudflareProviders[providerMatch] = [];
+                        }
+                        cloudflareProviders[providerMatch].push(m);
+                    }
+
+                    // OpenAI/Gemini categorization - prioritize specific patterns
+                    if (id.includes('gemini') || owner.includes('google')) {
                         geminiList.push(m);
-                    } else {
-                        // fallback: if ambiguous, add to both
+                    } else if ((id.includes('gpt') || owner.includes('openai') || id.startsWith('text-') || id.startsWith('oai-')) && !id.startsWith('@cf/') && !id.startsWith('@hf/')) {
                         openaiList.push(m);
-                        geminiList.push(m);
+                    } else if (!providerMatch && !id.startsWith('@cf/') && !id.startsWith('@hf/')) {
+                        // Only add to openaiList if it's not a Cloudflare or HuggingFace model
+                        openaiList.push(m);
                     }
                 });
 
-                // Populate UI selects
-                const openaiSelect = document.getElementById('openai-model-select');
-                const geminiSelect = document.getElementById('gemini-model-select');
-
-                openaiSelect.innerHTML = '';
-                geminiSelect.innerHTML = '';
-
-                openaiList.forEach(m => {
-                    const o = document.createElement('option');
-                    o.value = m.id || m.name;
-                    o.textContent = m.id || m.name;
-                    openaiSelect.appendChild(o);
+                // Populate cloudflare provider selects (both main and chat)
+                const providerSelect = document.getElementById('cloudflare-provider-select');
+                const chatProviderSelect = document.getElementById('chat-cloudflare-provider');
+                
+                [providerSelect, chatProviderSelect].forEach(select => {
+                    select.innerHTML = '';
+                    const noneOption = document.createElement('option');
+                    noneOption.value = '';
+                    noneOption.textContent = 'Choose provider...';
+                    select.appendChild(noneOption);
+                    Object.keys(cloudflareProviders).sort().forEach(p => {
+                        const o = document.createElement('option');
+                        o.value = p;
+                        o.textContent = `${p} (${cloudflareProviders[p].length} models)`;
+                        select.appendChild(o);
+                    });
                 });
+                
+                if (!providerSelect.value && providerSelect.options.length > 1) providerSelect.selectedIndex = 1;
+                onCloudflareProviderChange();
 
-                geminiList.forEach(m => {
-                    const o = document.createElement('option');
-                    o.value = m.id || m.name;
-                    o.textContent = m.id || m.name;
-                    geminiSelect.appendChild(o);
-                });
+                // Store categorized models for use in dropdowns
+                openaiModels = openaiList;
+                geminiModels = geminiList;
 
-                // If current AI service matches, update chat model choices
+                // Update all model selectors
                 updateModelSelectors();
+                updateChatModelSelectors();
+
             } catch (err) {
-                console.error('Error loading models with auth:', err);
+                console.error('Error loading models:', err);
+                // re-throw to be caught by caller
+                throw err;
             }
         }
 
         // When user picks a cloudflare provider, populate provider-specific models
         function onCloudflareProviderChange() {
             const provider = document.getElementById('cloudflare-provider-select').value;
-            const modelSelect = document.getElementById('cloudflare-model-select');
-            modelSelect.innerHTML = '';
-            if (!provider) return;
-            const list = cloudflareProviders[provider] || [];
-            list.forEach(m => {
-                const o = document.createElement('option');
-                o.value = m.id || m.name;
-                o.textContent = m.id || m.name;
-                modelSelect.appendChild(o);
-            });
             updateModelSelectors();
         }
 
-        // When AI service changes, show/hide controls and update chat model selector
+        // Chat-specific cloudflare provider change handler
+        function onChatCloudflareProviderChange() {
+            updateChatModelSelectors();
+        }
+
+        // When AI service changes, show/hide controls and update model selector
         function onAIServiceChange() {
             const svc = document.getElementById('ai-service').value;
-            document.getElementById('openai-controls').style.display = svc === 'openai' ? 'block' : 'none';
-            document.getElementById('gemini-controls').style.display = svc === 'gemini' ? 'block' : 'none';
-            document.getElementById('cloudflare-controls').style.display = svc === 'cloudflare' ? 'block' : 'none';
-            document.getElementById('cloudflare-model-controls').style.display = svc === 'cloudflare' ? 'block' : 'none';
-
-            // If user selected OpenAI or Gemini but we don't yet have their models loaded, attempt to load using global key
-            const globalKey = document.getElementById('global-api-key').value;
-            const chatKey = document.getElementById('chat-api-key').value;
-            if ((svc === 'openai' || svc === 'gemini') && (globalKey || chatKey)) {
-                loadModelsWithAuth(globalKey || chatKey);
+            const cloudflareControls = document.getElementById('cloudflare-controls');
+            const modelControls = document.getElementById('model-controls');
+            
+            // Show/hide Cloudflare provider dropdown
+            if (svc === 'cloudflare') {
+                cloudflareControls.style.display = 'block';
+                modelControls.style.display = 'block';
+            } else {
+                cloudflareControls.style.display = 'none';
+                modelControls.style.display = svc ? 'block' : 'none';
             }
 
+            // Clear and populate models based on service
             updateModelSelectors();
         }
 
-        // Map UI model controls into the single chat-model selector used in the chat UI
+        // Chat-specific AI service change handler
+        function onChatAIServiceChange() {
+            const svc = document.getElementById('chat-ai-service').value;
+            const cloudflareControls = document.getElementById('chat-cloudflare-controls');
+            
+            // Show/hide Cloudflare provider dropdown
+            if (svc === 'cloudflare') {
+                cloudflareControls.style.display = 'block';
+            } else {
+                cloudflareControls.style.display = 'none';
+            }
+
+            // Update chat model selector
+            updateChatModelSelectors();
+        }
+
+        // Update model selectors for the main tester
         function updateModelSelectors() {
             const svc = document.getElementById('ai-service').value;
-            const chatModelSelect = document.getElementById('chat-model');
-            chatModelSelect.innerHTML = '';
+            const modelSelect = document.getElementById('model-select');
+            modelSelect.innerHTML = '<option value="">Choose model...</option>';
 
             if (svc === 'cloudflare') {
-                // prefer currently selected cloudflare-model-select options
-                const cfSelect = document.getElementById('cloudflare-model-select');
-                if (cfSelect && cfSelect.options.length) {
-                    Array.from(cfSelect.options).forEach(opt => {
-                        const o = document.createElement('option');
-                        o.value = opt.value;
-                        o.textContent = opt.textContent;
-                        chatModelSelect.appendChild(o);
-                    });
-                } else {
-                    // fallback: include core availableModels
-                    availableModels.forEach(m => {
-                        const o = document.createElement('option');
-                        o.value = m.id || m.name;
-                        o.textContent = m.id || m.name;
-                        chatModelSelect.appendChild(o);
+                const provider = document.getElementById('cloudflare-provider-select').value;
+                if (provider && cloudflareProviders[provider]) {
+                    cloudflareProviders[provider].forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id || model.name;
+                        option.textContent = (model.id || model.name) + (model.description ? ` - ${model.description.substring(0, 50)}...` : '');
+                        modelSelect.appendChild(option);
                     });
                 }
             } else if (svc === 'openai') {
-                const openaiSelect = document.getElementById('openai-model-select');
-                if (openaiSelect && openaiSelect.options.length) {
-                    Array.from(openaiSelect.options).forEach(opt => chatModelSelect.appendChild(opt.cloneNode(true)));
-                }
+                openaiModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id || model.name;
+                    option.textContent = model.id || model.name;
+                    modelSelect.appendChild(option);
+                });
             } else if (svc === 'gemini') {
-                const geminiSelect = document.getElementById('gemini-model-select');
-                if (geminiSelect && geminiSelect.options.length) {
-                    Array.from(geminiSelect.options).forEach(opt => chatModelSelect.appendChild(opt.cloneNode(true)));
-                }
+                geminiModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id || model.name;
+                    option.textContent = model.id || model.name;
+                    modelSelect.appendChild(option);
+                });
             }
+        }
 
-            // If still empty, populate some sensible fallback options
-            if (!chatModelSelect.options.length) {
-                ['gpt-4', 'gpt-4o', 'gpt-3.5-turbo'].forEach(id => {
-                    const o = document.createElement('option'); o.value = id; o.textContent = id; chatModelSelect.appendChild(o);
+        // Update chat model selectors
+        function updateChatModelSelectors() {
+            const svc = document.getElementById('chat-ai-service').value;
+            const chatModelSelect = document.getElementById('chat-model');
+            chatModelSelect.innerHTML = '<option value="">Choose model...</option>';
+
+            if (svc === 'cloudflare') {
+                const provider = document.getElementById('chat-cloudflare-provider').value;
+                if (provider && cloudflareProviders[provider]) {
+                    cloudflareProviders[provider].forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id || model.name;
+                        option.textContent = (model.id || model.name) + (model.description ? ` - ${model.description.substring(0, 50)}...` : '');
+                        chatModelSelect.appendChild(option);
+                    });
+                }
+            } else if (svc === 'openai') {
+                openaiModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id || model.name;
+                    option.textContent = model.id || model.name;
+                    chatModelSelect.appendChild(option);
+                });
+            } else if (svc === 'gemini') {
+                geminiModels.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id || model.name;
+                    option.textContent = model.id || model.name;
+                    chatModelSelect.appendChild(option);
                 });
             }
         }
@@ -1027,27 +1211,30 @@ print(response.json()['choices'][0]['message']['content'])
         // Test connection button: attempt to call /v1/models with provided key
         async function testConnection() {
             const key = document.getElementById('global-api-key').value;
+            const statusIndicator = document.getElementById('connection-status');
+            const statusText = document.getElementById('connection-text');
+
             if (!key) {
                 alert('Enter your API key first');
                 return;
             }
+
             try {
-                const res = await fetch('/v1/models', { headers: { 'Authorization': 'Bearer ' + key } });
-                const statusIndicator = document.getElementById('connection-status');
-                const statusText = document.getElementById('connection-text');
-                if (res.ok) {
-                    statusIndicator.classList.remove('disconnected');
-                    statusIndicator.classList.add('connected');
-                    statusText.textContent = 'Connected';
-                    await loadModelsWithAuth(key);
-                } else {
-                    statusIndicator.classList.remove('connected');
-                    statusIndicator.classList.add('disconnected');
-                    statusText.textContent = 'Not Connected (' + res.status + ')';
-                }
+                // Indicate loading
+                statusText.textContent = 'Connecting...';
+                await loadAndCategorizeModels(key);
+
+                // If successful, update status
+                statusIndicator.classList.remove('disconnected');
+                statusIndicator.classList.add('connected');
+                statusText.textContent = 'Connected';
+
             } catch (err) {
                 console.error('Connection test error', err);
-                alert('Connection test failed: ' + err.message);
+                statusIndicator.classList.remove('connected');
+                statusIndicator.classList.add('disconnected');
+                statusText.textContent = 'Connection Failed';
+                // alert('Connection test failed: ' + err.message);
             }
         }
 
@@ -1058,10 +1245,13 @@ print(response.json()['choices'][0]['message']['content'])
             document.getElementById('connection-status').classList.add('disconnected');
         }
 
-        function onChatApiKeyChange() {
-            // If user enters a chat-specific key, attempt to load OpenAI/Gemini models using it
+        async function onChatApiKeyChange() {
             const key = document.getElementById('chat-api-key').value;
-            if (key) loadModelsWithAuth(key);
+            if (key) {
+                // also update global key for consistency
+                document.getElementById('global-api-key').value = key;
+                await testConnection();
+            }
         }
 
         function handleChatKeyPress(e) {
@@ -1084,15 +1274,11 @@ print(response.json()['choices'][0]['message']['content'])
             if (!userText) return;
 
             const chatKey = document.getElementById('chat-api-key').value || document.getElementById('global-api-key').value;
-            const aiService = document.getElementById('ai-service').value;
+            const aiService = document.getElementById('chat-ai-service').value;
             const streamEnabled = document.getElementById('stream-chat').checked;
 
-            // Determine model selection according to service
+            // Get selected model
             let model = document.getElementById('chat-model').value;
-            if (aiService === 'cloudflare') {
-                // if chat-model empty, fallback to cloudflare-model-select
-                model = model || document.getElementById('cloudflare-model-select').value;
-            }
 
             // Append user message to UI
             const container = document.getElementById('chat-messages');
@@ -1300,6 +1486,96 @@ print(response.json()['choices'][0]['message']['content'])
             }
         }
 
+        // Test functions
+        async function runAPITests() {
+            const statusIndicator = document.getElementById('test-status-indicator');
+            const statusText = document.getElementById('test-status-text');
+            const testDetails = document.getElementById('test-details');
+            
+            // Set loading state
+            statusIndicator.className = 'status-indicator pending';
+            statusText.textContent = 'Running tests...';
+            testDetails.innerHTML = '<div class="test-item pending"><div class="test-message">Loading test results...</div></div>';
+            
+            try {
+                const response = await fetch('/test/apis', {
+                    headers: {
+                        'Authorization': 'Bearer ' + document.getElementById('global-api-key').value
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayTestResults(data);
+                
+            } catch (error) {
+                console.error('Test error:', error);
+                statusIndicator.className = 'status-indicator fail';
+                statusText.textContent = 'Test failed';
+                testDetails.innerHTML = `<div class="test-item fail"><div class="test-message">Error: ${error.message}</div></div>`;
+            }
+        }
+        
+        function displayTestResults(data) {
+            const statusIndicator = document.getElementById('test-status-indicator');
+            const statusText = document.getElementById('test-status-text');
+            const testDetails = document.getElementById('test-details');
+            
+            // Determine overall status
+            const allPassed = Object.values(data.tests).every(test => test.status === 'PASS');
+            const anyFailed = Object.values(data.tests).some(test => test.status === 'FAIL');
+            
+            if (allPassed) {
+                statusIndicator.className = 'status-indicator pass';
+                statusText.textContent = 'All tests passed';
+            } else if (anyFailed) {
+                statusIndicator.className = 'status-indicator fail';
+                statusText.textContent = 'Some tests failed';
+            } else {
+                statusIndicator.className = 'status-indicator pending';
+                statusText.textContent = 'Tests completed';
+            }
+            
+            // Display individual test results
+            testDetails.innerHTML = Object.entries(data.tests).map(([name, test]) => {
+                const testName = name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, ' $1');
+                return `
+                    <div class="test-item ${test.status.toLowerCase()}">
+                        <div class="test-header">
+                            <div class="test-name">${testName}</div>
+                            <div class="test-status-badge ${test.status.toLowerCase()}">${test.status}</div>
+                        </div>
+                        <div class="test-message">${test.message}</div>
+                        <div class="test-stats">
+                            <div class="test-stat">
+                                <span class="test-stat-label">Models:</span>
+                                <span class="test-stat-value">${test.models}</span>
+                            </div>
+                            ${test.providers ? `
+                                <div class="test-stat">
+                                    <span class="test-stat-label">Providers:</span>
+                                    <span class="test-stat-value">${test.providers}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function clearTestResults() {
+            const statusIndicator = document.getElementById('test-status-indicator');
+            const statusText = document.getElementById('test-status-text');
+            const testDetails = document.getElementById('test-details');
+            
+            statusIndicator.className = 'status-indicator';
+            statusText.textContent = 'Ready to test';
+            testDetails.innerHTML = '';
+        }
+
         // expose a couple helpers to global scope for inline onclick usage
         window.selectEndpoint = selectEndpoint;
         window.copyToClipboard = copyToClipboard;
@@ -1311,6 +1587,8 @@ print(response.json()['choices'][0]['message']['content'])
         window.sendChatMessage = sendChatMessage;
         window.showSection = showSection;
         window.clearChat = clearChat;
+        window.runAPITests = runAPITests;
+        window.clearTestResults = clearTestResults;
     </script>
 </body>
 

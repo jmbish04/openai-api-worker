@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Quick Fix Test</title>
+</head>
+
+<body>
+    <h1>API Provider Issues Debug & Fix</h1>
+
+    <h2>Issue 1: Gemini Only Shows 1 Model</h2>
+    <div id="gemini-info"></div>
+    <button onclick="testGeminiIssue()">Test Gemini</button>
+
+    <h2>Issue 2: Cloudflare Providers Dropdown Empty</h2>
+    <div id="cloudflare-info"></div>
+    <button onclick="testCloudflareIssue()">Test Cloudflare</button>
+
+    <h2>Main Test Interface</h2>
+    <div>
+        <label>AI Provider:</label>
+        <select id="ai-provider" onchange="onProviderChange()">
+            <option value="">Choose...</option>
+            <option value="gemini">Gemini</option>
+            <option value="openai">OpenAI</option>
+            <option value="cloudflare">Cloudflare AI</option>
+        </select>
+    </div>
+
+    <div id="cloudflare-provider-group" style="display:none;">
+        <label>Cloudflare Provider:</label>
+        <select id="cloudflare-provider" onchange="onCloudflareProviderChange()">
+            <option value="">Choose provider...</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Model:</label>
+        <select id="model-select">
+            <option value="">Choose model...</option>
+        </select>
+    </div>
+
+    <div>
+        <button onclick="loadModelsForProvider()">Load Models</button>
+    </div>
+
+    <pre id="debug-output"></pre>
+
+    <script>
+        const API_KEY = 'test-key';
+        let cloudflareProviders = {};
+        let currentProvider = '';
+
+        function log(message) {
+            const output = document.getElementById('debug-output');
+            output.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+
+        async function testGeminiIssue() {
+            const infoDiv = document.getElementById('gemini-info');
+            try {
+                log('Testing Gemini endpoint...');
+                const response = await fetch('/v1/models?provider=gemini', {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                const data = await response.json();
+
+                const info = `
+                    Status: ${response.status}
+                    Models count: ${data.data?.length || 0}
+                    Models: ${JSON.stringify(data.data, null, 2)}
+                `;
+                infoDiv.innerHTML = '<pre>' + info + '</pre>';
+                log('Gemini test completed - found ' + (data.data?.length || 0) + ' models');
+
+                // The issue might be that we only have GEMINI_API_KEY configured but it's only returning embedding models
+                // Real Gemini API typically returns more models for text generation
+
+            } catch (error) {
+                infoDiv.innerHTML = '<pre>Error: ' + error.message + '</pre>';
+                log('Gemini test failed: ' + error.message);
+            }
+        }
+
+        async function testCloudflareIssue() {
+            const infoDiv = document.getElementById('cloudflare-info');
+            try {
+                log('Testing Cloudflare JSON parsing...');
+                const response = await fetch('/cloudflare_ai_models.json');
+                const data = await response.json();
+
+                log('Cloudflare JSON loaded, parsing providers...');
+
+                // Debug the parsing logic step by step
+                const allModels = [];
+                cloudflareProviders = {};
+
+                let totalCapabilities = 0;
+                let totalProviders = 0;
+                let totalModels = 0;
+
+                if (data.capabilities) {
+                    Object.entries(data.capabilities).forEach(([capabilityName, capability]) => {
+                        totalCapabilities++;
+                        log(`Processing capability: ${capabilityName}`);
+
+                        if (capability && typeof capability === 'object') {
+                            Object.entries(capability).forEach(([provider, models]) => {
+                                if (Array.isArray(models) && models.length > 0) {
+                                    totalProviders++;
+                                    log(`  Provider: ${provider} has ${models.length} models`);
+
+                                    models.forEach(model => {
+                                        allModels.push(model);
+                                        totalModels++;
+
+                                        // Extract provider name from model name or use the provider key
+                                        let providerName = provider;
+                                        if (model.name && model.name.startsWith('@cf/')) {
+                                            const parts = model.name.substring(4).split('/');
+                                            if (parts.length > 1) {
+                                                providerName = parts[0];
+                                            }
+                                        }
+
+                                        if (!cloudflareProviders[providerName]) {
+                                            cloudflareProviders[providerName] = [];
+                                        }
+                                        cloudflareProviders[providerName].push(model);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+
+                const providerNames = Object.keys(cloudflareProviders);
+                log(`Parsing complete: ${providerNames.length} unique providers found`);
+                log('Providers: ' + providerNames.join(', '));
+
+                // Populate the dropdown
+                const providerSelect = document.getElementById('cloudflare-provider');
+                providerSelect.innerHTML = '<option value="">Choose provider...</option>';
+
+                providerNames.sort().forEach(providerName => {
+                    const option = document.createElement('option');
+                    option.value = providerName;
+                    option.textContent = `${providerName} (${cloudflareProviders[providerName].length} models)`;
+                    providerSelect.appendChild(option);
+                });
+
+                const info = `
+                    Status: ${response.status}
+                    Total capabilities: ${totalCapabilities}
+                    Total provider entries: ${totalProviders}
+                    Total models: ${totalModels}
+                    Unique providers: ${providerNames.length}
+                    Provider names: ${providerNames.join(', ')}
+                `;
+                infoDiv.innerHTML = '<pre>' + info + '</pre>';
+                log('Cloudflare test completed - found ' + providerNames.length + ' providers');
+
+            } catch (error) {
+                infoDiv.innerHTML = '<pre>Error: ' + error.message + '</pre>';
+                log('Cloudflare test failed: ' + error.message);
+            }
+        }
+
+        function onProviderChange() {
+            currentProvider = document.getElementById('ai-provider').value;
+            const providerGroup = document.getElementById('cloudflare-provider-group');
+
+            if (currentProvider === 'cloudflare') {
+                providerGroup.style.display = 'block';
+            } else {
+                providerGroup.style.display = 'none';
+            }
+
+            log('Provider changed to: ' + currentProvider);
+        }
+
+        function onCloudflareProviderChange() {
+            const provider = document.getElementById('cloudflare-provider').value;
+            const modelSelect = document.getElementById('model-select');
+
+            modelSelect.innerHTML = '<option value="">Choose model...</option>';
+
+            if (provider && cloudflareProviders[provider]) {
+                const models = cloudflareProviders[provider];
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.name || model.id;
+                    option.textContent = model.name || model.id;
+                    modelSelect.appendChild(option);
+                });
+                log(`Loaded ${models.length} models for provider: ${provider}`);
+            }
+        }
+
+        async function loadModelsForProvider() {
+            const provider = document.getElementById('ai-provider').value;
+            const modelSelect = document.getElementById('model-select');
+
+            if (!provider) {
+                log('No provider selected');
+                return;
+            }
+
+            log('Loading models for provider: ' + provider);
+
+            try {
+                if (provider === 'cloudflare') {
+                    await testCloudflareIssue();
+                    return;
+                }
+
+                let endpoint = `/v1/models?provider=${provider}`;
+                const response = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const models = data.data || [];
+
+                modelSelect.innerHTML = '<option value="">Choose model...</option>';
+                models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.id || model.name;
+                    option.textContent = model.id || model.name;
+                    modelSelect.appendChild(option);
+                });
+
+                log(`Loaded ${models.length} models for ${provider}`);
+
+            } catch (error) {
+                log('Failed to load models: ' + error.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

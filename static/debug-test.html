@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debug Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+        }
+
+        .test {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Debug AI Provider Tests</h1>
+
+    <div class="test">
+        <h3>Test 1: Gemini Models</h3>
+        <button onclick="testGemini()">Test Gemini Endpoint</button>
+        <pre id="gemini-result"></pre>
+    </div>
+
+    <div class="test">
+        <h3>Test 2: OpenAI Models</h3>
+        <button onclick="testOpenAI()">Test OpenAI Endpoint</button>
+        <pre id="openai-result"></pre>
+    </div>
+
+    <div class="test">
+        <h3>Test 3: Cloudflare Models JSON</h3>
+        <button onclick="testCloudflareJSON()">Test Cloudflare JSON</button>
+        <pre id="cloudflare-result"></pre>
+    </div>
+
+    <div class="test">
+        <h3>Test 4: All Models Combined</h3>
+        <button onclick="testAllModels()">Test All Models Endpoint</button>
+        <pre id="all-result"></pre>
+    </div>
+
+    <script>
+        const API_KEY = 'test-key';
+
+        async function testGemini() {
+            const result = document.getElementById('gemini-result');
+            try {
+                const response = await fetch('/v1/models?provider=gemini', {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function testOpenAI() {
+            const result = document.getElementById('openai-result');
+            try {
+                const response = await fetch('/v1/models?provider=openai', {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                result.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function testCloudflareJSON() {
+            const result = document.getElementById('cloudflare-result');
+            try {
+                const response = await fetch('/cloudflare_ai_models.json');
+                const data = await response.json();
+
+                // Debug the parsing logic
+                const allModels = [];
+                const cloudflareProviders = {};
+
+                console.log('Data structure:', Object.keys(data));
+                console.log('Capabilities:', Object.keys(data.capabilities || {}));
+
+                if (data.capabilities) {
+                    Object.entries(data.capabilities).forEach(([capabilityName, capability]) => {
+                        console.log(`Processing capability: ${capabilityName}`, Object.keys(capability || {}));
+
+                        Object.entries(capability).forEach(([provider, models]) => {
+                            console.log(`Processing provider: ${provider}`, Array.isArray(models), models?.length);
+
+                            if (Array.isArray(models)) {
+                                models.forEach(model => {
+                                    allModels.push(model);
+
+                                    // Extract provider name from model name or use the provider key
+                                    let providerName = provider;
+                                    if (model.name && model.name.startsWith('@cf/')) {
+                                        const parts = model.name.substring(4).split('/');
+                                        if (parts.length > 1) {
+                                            providerName = parts[0];
+                                        }
+                                    }
+
+                                    if (!cloudflareProviders[providerName]) {
+                                        cloudflareProviders[providerName] = [];
+                                    }
+                                    cloudflareProviders[providerName].push(model);
+                                });
+                            }
+                        });
+                    });
+                }
+
+                const debugInfo = {
+                    totalModels: allModels.length,
+                    providers: Object.keys(cloudflareProviders).length,
+                    providerNames: Object.keys(cloudflareProviders),
+                    providerBreakdown: Object.fromEntries(
+                        Object.entries(cloudflareProviders).map(([name, models]) => [name, models.length])
+                    ),
+                    sampleModel: allModels[0]
+                };
+
+                result.textContent = JSON.stringify(debugInfo, null, 2);
+
+            } catch (error) {
+                result.textContent = `Error: ${error.message}`;
+                console.error('Error:', error);
+            }
+        }
+
+        async function testAllModels() {
+            const result = document.getElementById('all-result');
+            try {
+                const response = await fetch('/v1/models', {
+                    headers: { 'Authorization': `Bearer ${API_KEY}` }
+                });
+                const data = await response.json();
+
+                const summary = {
+                    totalModels: data.data?.length || 0,
+                    modelsByOwner: {},
+                    cloudflareModels: data.data?.filter(m => (m.id || '').startsWith('@cf/')).length || 0,
+                    sampleModels: data.data?.slice(0, 5) || []
+                };
+
+                data.data?.forEach(model => {
+                    const owner = model.owner || 'unknown';
+                    summary.modelsByOwner[owner] = (summary.modelsByOwner[owner] || 0) + 1;
+                });
+
+                result.textContent = JSON.stringify(summary, null, 2);
+            } catch (error) {
+                result.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+
+</html>
