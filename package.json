@@ -5,8 +5,9 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy && npm run test:post-deploy",
+    "deploy": "pnpm run check-problems && wrangler deploy && npm run test:post-deploy",
     "deploy:only": "wrangler deploy",
+    "check-problems": "./check-problems.sh",
     "test:post-deploy": "echo 'Running post-deployment tests...' && npm run test:service-binding && npm run test:core-api",
     "tail": "wrangler tail",
     "logs": "./logs.sh",
@@ -14,8 +15,11 @@
     "test:service-binding": "node test/service-binding-test.js",
     "test:core-api": "node test/core-api-test.js",
     "deploy:staging": "wrangler deploy --env staging",
-    "type-check": "tsc --noEmit",
-    "build": "tsc"
+    "type-check": "tsc --noEmit -p .",
+    "build": "tsc",
+    "gemini-models": "tsx model_info/gemini-models.ts",
+    "openai-models": "tsx model_info/openai-models.ts",
+    "cloudflare-models": "tsx model_info/cloudflare-models.ts"
   },
   "keywords": [
     "cloudflare",
@@ -31,7 +35,8 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
     "wrangler": "^4.37.1"
   },
   "dependencies": {

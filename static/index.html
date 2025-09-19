@@ -539,13 +539,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 OpenAI API Worker</h1>
-            <p>Cloudflare-powered AI with OpenAI compatibility</p>
+            <h1>🚀 OpenAI API Worker v2.1.0</h1>
+            <p>Cloudflare-powered AI with OpenAI compatibility and memory support</p>
             <div class="badges">
                 <span class="badge">OpenAI Compatible</span>
                 <span class="badge streaming">Streaming</span>
                 <span class="badge multimodal">Multimodal</span>
                 <span class="badge cors">CORS Ready</span>
+                <span class="badge" style="background: #e91e63;">Memory</span>
             </div>
         </div>
 
@@ -572,7 +573,7 @@
                     <li><strong>Memory System:</strong> KV-based conversation memory with keyword isolation</li>
                     <li><strong>Edge Performance:</strong> Powered by Cloudflare's global network</li>
                     <li><strong>Streaming Responses:</strong> Real-time response streaming</li>
-                    <li><strong>Multiple Endpoints:</strong> Standard, structured, and text-only endpoints</li>
+                    <li><strong>Multiple Endpoints:</strong> Standard, structured, text-only, and memory-enabled endpoints</li>
                     <li><strong>CORS Enabled:</strong> Ready for web applications</li>
                 </ul>
 
@@ -665,6 +666,12 @@
                         <div class="endpoint-method post">POST</div>
                         <h4>/v1/completions</h4>
                         <p>Legacy text completion endpoint</p>
+                    </div>
+
+                    <div class="endpoint-card" onclick="selectEndpoint('completions-memory')">
+                        <div class="endpoint-method post">POST</div>
+                        <h4>/v1/completions/withmemory</h4>
+                        <p>Text completion with KV memory support</p>
                     </div>
                 </div>
 
@@ -810,6 +817,12 @@
                     <div class="endpoint-method post">POST</div>
                     <h4>/v1/completions</h4>
                     <p>Legacy completion endpoint for simple text generation</p>
+                </div>
+
+                <div class="endpoint-card">
+                    <div class="endpoint-method post">POST</div>
+                    <h4>/v1/completions/withmemory</h4>
+                    <p>Text completion with KV-based conversation memory support (requires memory=true and memory_keyword)</p>
                 </div>
             </div>
 
@@ -1444,6 +1457,8 @@ print(response.json()['choices'][0]['message']['content'])
                 holder.innerHTML = '<div class="form-group"><label>API Key (optional)</label><input id="test-chat-key" placeholder="Bearer key"></div><div class="form-group full-width"><label>Model</label><input id="test-chat-model" placeholder="gpt-4"></div><div class="form-group full-width"><label>Messages (JSON array)</label><textarea id="test-chat-messages">[ { "role": "user", "content": "Hello" } ]</textarea></div><button class="btn" onclick="runTestChat()">Run</button>';
             } else if (name === 'completions') {
                 holder.innerHTML = '<div class="form-group"><label>API Key (optional)</label><input id="test-comp-key" placeholder="Bearer key"></div><div class="form-group full-width"><label>Model</label><input id="test-comp-model" placeholder="gpt-4"></div><div class="form-group full-width"><label>Prompt</label><textarea id="test-comp-prompt">Hello</textarea></div><button class="btn" onclick="runTestCompletions()">Run</button>';
+            } else if (name === 'completions-memory') {
+                holder.innerHTML = '<div class="form-group"><label>API Key (optional)</label><input id="test-comp-mem-key" placeholder="Bearer key"></div><div class="form-group full-width"><label>Model</label><input id="test-comp-mem-model" placeholder="gpt-4"></div><div class="form-group full-width"><label>Prompt</label><textarea id="test-comp-mem-prompt">Hello</textarea></div><div class="form-group"><label>Memory Keyword</label><input id="test-comp-mem-keyword" placeholder="user123-session"></div><button class="btn" onclick="runTestCompletionsMemory()">Run</button>';
             }
             document.getElementById('endpoint-tester').style.display = 'block';
         }
@@ -1479,6 +1494,31 @@ print(response.json()['choices'][0]['message']['content'])
                 const headers = { 'Content-Type': 'application/json' };
                 if (key) headers['Authorization'] = 'Bearer ' + key;
                 const res = await fetch('/v1/completions', { method: 'POST', headers, body: JSON.stringify({ model, prompt }) });
+                const text = await res.text();
+                document.getElementById('endpoint-response').innerHTML = '<pre class="json-viewer">' + escapeHtml(text) + '</pre>';
+            } catch (e) {
+                document.getElementById('endpoint-response').innerHTML = '<div class="alert error">' + escapeHtml(e.message) + '</div>';
+            }
+        }
+
+        async function runTestCompletionsMemory() {
+            try {
+                const key = document.getElementById('test-comp-mem-key').value;
+                const model = document.getElementById('test-comp-mem-model').value || 'gpt-4';
+                const prompt = document.getElementById('test-comp-mem-prompt').value || '';
+                const memoryKeyword = document.getElementById('test-comp-mem-keyword').value || 'test-session';
+                const headers = { 'Content-Type': 'application/json' };
+                if (key) headers['Authorization'] = 'Bearer ' + key;
+                const res = await fetch('/v1/completions/withmemory', { 
+                    method: 'POST', 
+                    headers, 
+                    body: JSON.stringify({ 
+                        model, 
+                        prompt, 
+                        memory: true, 
+                        memory_keyword: memoryKeyword 
+                    }) 
+                });
                 const text = await res.text();
                 document.getElementById('endpoint-response').innerHTML = '<pre class="json-viewer">' + escapeHtml(text) + '</pre>';
             } catch (e) {
@@ -1584,6 +1624,7 @@ print(response.json()['choices'][0]['message']['content'])
         window.runTestModels = runTestModels;
         window.runTestChat = runTestChat;
         window.runTestCompletions = runTestCompletions;
+        window.runTestCompletionsMemory = runTestCompletionsMemory;
         window.sendChatMessage = sendChatMessage;
         window.showSection = showSection;
         window.clearChat = clearChat;

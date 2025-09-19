@@ -3,7 +3,7 @@
   "info": {
     "title": "OpenAI-Compatible API Worker",
     "description": "A Cloudflare Worker that exposes Cloudflare AI models through an OpenAI-compatible API interface",
-    "version": "1.0.0",
+    "version": "2.1.0",
     "contact": {
       "name": "API Support"
     },
@@ -318,6 +318,48 @@
           }
         }
       }
+    },
+    "/v1/completions/withmemory": {
+      "post": {
+        "summary": "Create completion with memory",
+        "description": "Creates a completion with KV-based conversation memory support. Requires memory=true and memory_keyword parameters.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionWithMemoryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Completion response with memory context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -459,9 +501,14 @@
             "minimum": -2,
             "maximum": 2
           },
+          "memory": {
+            "type": "boolean",
+            "description": "Enable KV-based conversation memory. When true, memory_keyword is required.",
+            "default": false
+          },
           "memory_keyword": {
             "type": "string",
-            "description": "Optional keyword for KV memory isolation. If provided, enables memory context for this conversation.",
+            "description": "Keyword for KV memory isolation. Required when memory=true.",
             "example": "user123-session"
           },
           "response_format": {
@@ -562,9 +609,14 @@
             "minimum": -2,
             "maximum": 2
           },
+          "memory": {
+            "type": "boolean",
+            "description": "Enable KV-based conversation memory. When true, memory_keyword is required.",
+            "default": false
+          },
           "memory_keyword": {
             "type": "string",
-            "description": "Optional keyword for KV memory isolation. If provided, enables memory context for this conversation.",
+            "description": "Keyword for KV memory isolation. Required when memory=true.",
             "example": "user123-session"
           }
         }
@@ -634,9 +686,14 @@
             "minimum": -2,
             "maximum": 2
           },
+          "memory": {
+            "type": "boolean",
+            "description": "Enable KV-based conversation memory. When true, memory_keyword is required.",
+            "default": false
+          },
           "memory_keyword": {
             "type": "string",
-            "description": "Optional keyword for KV memory isolation. If provided, enables memory context for this conversation.",
+            "description": "Keyword for KV memory isolation. Required when memory=true.",
             "example": "user123-session"
           }
         }
@@ -653,6 +710,41 @@
           "prompt": {
             "type": "string",
             "description": "The prompt to generate completions for"
+          },
+          "max_tokens": {
+            "type": "integer",
+            "description": "Maximum number of tokens to generate",
+            "default": 100
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Sampling temperature",
+            "default": 0.7
+          }
+        }
+      },
+      "CompletionWithMemoryRequest": {
+        "type": "object",
+        "required": ["model", "prompt", "memory", "memory_keyword"],
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "ID of the model to use",
+            "example": "gpt-3.5-turbo"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The prompt to generate completions for"
+          },
+          "memory": {
+            "type": "boolean",
+            "description": "Enable KV-based conversation memory (must be true for this endpoint)",
+            "const": true
+          },
+          "memory_keyword": {
+            "type": "string",
+            "description": "Keyword for KV memory isolation (required for memory-enabled completions)",
+            "example": "user123-session"
           },
           "max_tokens": {
             "type": "integer",
@@ -810,6 +902,10 @@
     {
       "name": "Completions",
       "description": "Create text completions (legacy)"
+    },
+    {
+      "name": "Memory Completions",
+      "description": "Create text completions with KV-based conversation memory"
     }
   ]
 }
