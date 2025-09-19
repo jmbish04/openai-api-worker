@@ -94,6 +94,7 @@ export interface ApiModel {
     object: 'model';
     owner: string;
     created?: number;
+    tags?: string[];
 }
 
 // --- Provider-Specific Types ---

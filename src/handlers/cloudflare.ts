@@ -38,10 +38,19 @@ async function handleCloudflareRequest(params: any, env: Env, corsHeaders: Recor
     
         let aiRequestPayload: any;
         if (params.modelType === 'llama4') {
-            aiRequestPayload = { 
-                messages: Array.isArray(convertedMessages) ? convertedMessages : params.messages, 
-                stream: params.stream 
-            };
+            // Try messages format first, fall back to input format if it fails
+            if (Array.isArray(convertedMessages)) {
+                aiRequestPayload = { 
+                    messages: convertedMessages, 
+                    stream: params.stream 
+                };
+            } else {
+                // Fall back to input format for models that don't support messages
+                aiRequestPayload = { 
+                    input: (convertedMessages as { input: string }).input, 
+                    stream: params.stream 
+                };
+            }
             
             // Add support for structured JSON output if requested and supported by the model.
             if (params.response_format) {
@@ -57,7 +66,7 @@ async function handleCloudflareRequest(params: any, env: Env, corsHeaders: Recor
         } else {
             // For older models that expect a single prompt string.
             aiRequestPayload = { 
-                prompt: (convertedMessages as { input: string }).input, 
+                input: (convertedMessages as { input: string }).input, 
                 stream: params.stream 
             };
         }

@@ -11,6 +11,11 @@ import OpenAI from 'openai';
 import { GoogleGenAI } from "@google/genai";
 import type { ApiModel, ChatMessage, CloudflareAIModelsResponse, ModelType, Provider } from './types';
 import { debugLog, errorLog } from './utils';
+import { 
+    supportsStructuredOutputs,
+    supportsFunctionCalling,
+    supportsVision
+} from './handlers/model-info';
 
 /**
  * Detects the appropriate AI provider based on the model name string.
@@ -43,7 +48,7 @@ export function getModelType(model: string, provider: Provider): ModelType {
         const m = model.toLowerCase();
         if (m.includes('llama-4')) return 'llama4'; // Models supporting chat messages
         if (m.includes('llama')) return 'llama';   // Models requiring specific prompt templating
-        if (m.includes('openai') || m.includes('gpt-oss')) return 'llama4';
+        if (m.includes('openai') || m.includes('gpt-oss')) return 'input';
     }
     if (provider === 'openai') return 'openai';
     if (provider === 'gemini') return 'gemini';
@@ -249,11 +254,74 @@ export async function getCloudflareModels(env: Env): Promise<ApiModel[]> {
                 for (const [providerName, providerModels] of Object.entries(data.providers || {})) {
                     for (const m of providerModels || []) {
                         if ((m.task?.name || '').toLowerCase().includes('text')) {
+                            const modelId = m.name || m.id;
+                            const tags: string[] = [];
+                            
+                            // Add capability tags based on our model-info constants
+                            if (supportsStructuredOutputs(modelId, 'cloudflare')) {
+                                tags.push('structured_outputs');
+                            }
+                            if (supportsVision(modelId, 'cloudflare')) {
+                                tags.push('vision');
+                            }
+                            
+                            // Add model family tags based on provider
+                            if (providerName === 'meta') {
+                                tags.push('llama');
+                                if (modelId.includes('llama-4')) {
+                                    tags.push('llama-4');
+                                } else if (modelId.includes('llama-3')) {
+                                    tags.push('llama-3');
+                                } else if (modelId.includes('llama-2')) {
+                                    tags.push('llama-2');
+                                }
+                            } else if (providerName === 'mistral') {
+                                tags.push('mistral');
+                            } else if (providerName === 'qwen') {
+                                tags.push('qwen');
+                            } else if (providerName === 'google') {
+                                tags.push('gemma');
+                            } else if (providerName === 'openai') {
+                                tags.push('gpt-oss');
+                            }
+                            
+                            // Add capability tags based on model name patterns
+                            if (modelId.includes('instruct')) {
+                                tags.push('instruct');
+                            }
+                            if (modelId.includes('chat')) {
+                                tags.push('chat');
+                            }
+                            if (modelId.includes('vision')) {
+                                tags.push('vision');
+                            }
+                            if (modelId.includes('coder')) {
+                                tags.push('coder');
+                            }
+                            if (modelId.includes('math')) {
+                                tags.push('math');
+                            }
+                            if (modelId.includes('reasoning')) {
+                                tags.push('reasoning');
+                            }
+                            
+                            // Add size tags
+                            if (modelId.includes('7b')) {
+                                tags.push('7b');
+                            } else if (modelId.includes('8b')) {
+                                tags.push('8b');
+                            } else if (modelId.includes('13b')) {
+                                tags.push('13b');
+                            } else if (modelId.includes('70b')) {
+                                tags.push('70b');
+                            }
+                            
                             models.push({
-                                id: m.name || m.id,
-                                object: 'model',
+                                id: modelId,
+                                object: 'model' as const,
                                 owner: `cloudflare-${providerName}`,
                                 created: m.created_at ? Date.parse(m.created_at) / 1000 : undefined,
+                                tags: tags.length > 0 ? tags : undefined
                             });
                         }
                     }
@@ -299,7 +367,52 @@ export async function getOpenAIModels(env: Env): Promise<ApiModel[]> {
                 const isChatModel = m.id.includes('gpt') || m.id.includes('o1');
                 return isChatModel;
             })
-            .map(m => ({ id: m.id, object: 'model', owner: 'openai', created: m.created }));
+            .map(m => {
+                const tags: string[] = [];
+                
+                // Add capability tags based on our model-info constants
+                if (supportsStructuredOutputs(m.id, 'openai')) {
+                    tags.push('structured_outputs');
+                }
+                if (supportsFunctionCalling(m.id, 'openai')) {
+                    tags.push('function_calling');
+                }
+                if (supportsVision(m.id, 'openai')) {
+                    tags.push('vision');
+                }
+                
+                // Add model family tags
+                if (m.id.includes('gpt-4')) {
+                    tags.push('gpt-4');
+                } else if (m.id.includes('gpt-3.5')) {
+                    tags.push('gpt-3.5');
+                } else if (m.id.includes('o1')) {
+                    tags.push('o1');
+                }
+                
+                // Add model size tags
+                if (m.id.includes('mini')) {
+                    tags.push('mini');
+                } else if (m.id.includes('turbo')) {
+                    tags.push('turbo');
+                }
+                
+                // Add capability tags based on model name patterns
+                if (m.id.includes('vision')) {
+                    tags.push('vision');
+                }
+                if (m.id.includes('instruct')) {
+                    tags.push('instruct');
+                }
+                
+                return { 
+                    id: m.id, 
+                    object: 'model' as const, 
+                    owner: 'openai', 
+                    created: m.created,
+                    tags: tags.length > 0 ? tags : undefined
+                };
+            });
     }
     catch (error) {
         debugLog(env, 'Could not fetch OpenAI models', { error: (error as Error).message });
@@ -331,12 +444,53 @@ export async function getGeminiModels(env: Env): Promise<ApiModel[]> {
                 m.supportedActions?.includes('generateContent') && 
                 !m.description?.toLowerCase().includes('vertex')
             )
-            .map((m: any) => ({
-                id: m.name?.replace('models/', '') || '',
-                object: 'model',
-                owner: 'google',
-                created: m.createTime ? new Date(m.createTime).getTime() / 1000 : undefined
-            }));
+            .map((m: any) => {
+                const modelId = m.name?.replace('models/', '') || '';
+                const tags: string[] = [];
+                
+                // Add capability tags based on our model-info constants
+                if (supportsStructuredOutputs(modelId, 'gemini')) {
+                    tags.push('structured_outputs');
+                }
+                if (supportsFunctionCalling(modelId, 'gemini')) {
+                    tags.push('function_calling');
+                }
+                if (supportsVision(modelId, 'gemini')) {
+                    tags.push('vision');
+                }
+                
+                // Add model family tags
+                if (modelId.includes('gemini-1.5')) {
+                    tags.push('gemini-1.5');
+                } else if (modelId.includes('gemini-1.0')) {
+                    tags.push('gemini-1.0');
+                } else if (modelId.includes('gemini-pro')) {
+                    tags.push('gemini-pro');
+                }
+                
+                // Add model size tags
+                if (modelId.includes('flash')) {
+                    tags.push('flash');
+                } else if (modelId.includes('pro')) {
+                    tags.push('pro');
+                }
+                
+                // Add capability tags based on model name patterns
+                if (modelId.includes('vision')) {
+                    tags.push('vision');
+                }
+                if (modelId.includes('instruct')) {
+                    tags.push('instruct');
+                }
+                
+                return {
+                    id: modelId,
+                    object: 'model' as const,
+                    owner: 'google',
+                    created: m.createTime ? new Date(m.createTime).getTime() / 1000 : undefined,
+                    tags: tags.length > 0 ? tags : undefined
+                };
+            });
     }
     catch (error) {
         debugLog(env, 'Could not fetch Gemini models', { error: (error as Error).message });

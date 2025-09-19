@@ -15,6 +15,37 @@ import { detectProvider, getModelType, mapModelName } from './models';
 import { handleOpenAIRequest, handleOpenAIStructuredRequest, handleOpenAITextRequest } from './handlers/openai';
 import { handleGeminiRequest, handleGeminiStructuredRequest, handleGeminiTextRequest } from './handlers/gemini';
 import { handleCloudflareTextRequest, handleCloudflareStructuredRequest } from './handlers/cloudflare';
+import { supportsStructuredOutputs, getAvailableStructuredModels } from './handlers/model-info';
+
+/**
+ * Validates if a model supports structured outputs and returns an error response if not.
+ * 
+ * @param {string} model - The model name to validate
+ * @param {string} provider - The detected provider
+ * @returns {Response | null} Error response if validation fails, null if valid
+ */
+function validateStructuredModel(model: string, provider: string): Response | null {
+    if (!supportsStructuredOutputs(model, provider as 'openai' | 'gemini' | 'cloudflare')) {
+        const availableModels = getAvailableStructuredModels(provider as 'openai' | 'gemini' | 'cloudflare');
+        
+        const errorMessage = {
+            error: {
+                message: `Model '${model}' does not support structured outputs. Please use one of the following supported models:`,
+                type: 'invalid_request_error',
+                code: 'unsupported_model',
+                available_models: availableModels,
+                provider: provider
+            }
+        };
+        
+        return new Response(JSON.stringify(errorMessage), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+    
+    return null;
+}
 
 /**
  * Handles standard chat completion requests for the `/v1/chat/completions` endpoint.
@@ -127,6 +158,12 @@ export async function handleStructuredChatCompletions(request: Request, env: Env
         const mappedModel = mapModelName(model, provider, env);
         const modelType = getModelType(mappedModel, provider);
         debugLog(env, `Routing structured request to provider`, { provider, model: mappedModel, type: modelType, memory });
+
+        // Validate that the model supports structured outputs
+        const validationError = validateStructuredModel(mappedModel, provider);
+        if (validationError) {
+            return validationError;
+        }
 
         const messagesWithMemory = memory_keyword ? await addMemoryContext(messages, memory_keyword, env) : messages;
 

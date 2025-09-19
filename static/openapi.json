@@ -9,6 +9,100 @@
     },
     "license": {
       "name": "MIT"
+    },
+    "x-model-capabilities": {
+      "description": "Model capabilities by provider. Note: This is a static list that may become outdated. The actual API validation will always use the current model lists from the server.",
+      "providers": {
+        "openai": {
+          "structured_outputs": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4o-2024-08-06",
+            "gpt-4o-mini-2024-07-18"
+          ],
+          "function_calling": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4o-2024-08-06",
+            "gpt-4o-mini-2024-07-18",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4-0613",
+            "gpt-3.5-turbo-0613"
+          ],
+          "vision": [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4o-2024-08-06",
+            "gpt-4o-mini-2024-07-18",
+            "gpt-4.1",
+            "gpt-4.1-mini"
+          ],
+          "recommended": "gpt-4o-mini"
+        },
+        "gemini": {
+          "structured_outputs": [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite"
+          ],
+          "function_calling": [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite"
+          ],
+          "vision": [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite"
+          ],
+          "recommended": "gemini-2.5-flash"
+        },
+        "cloudflare": {
+          "structured_outputs": [
+            "@cf/meta/llama-4-scout-17b-16e-instruct",
+            "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+            "@cf/meta/llama-3.1-8b-instruct-fp8",
+            "@cf/meta/llama-3.1-8b-instruct-awq",
+            "@cf/meta/llama-3-8b-instruct-awq",
+            "@cf/meta/llama-3-8b-instruct",
+            "@cf/meta/llama-3.2-11b-vision-instruct",
+            "@cf/meta/llama-3.2-3b-instruct",
+            "@cf/meta/llama-3.2-1b-instruct",
+            "@cf/mistralai/mistral-small-3.1-24b-instruct",
+            "@cf/mistral/mistral-7b-instruct-v0.2-lora",
+            "@cf/mistral/mistral-7b-instruct-v0.1",
+            "@cf/qwen/qwen2.5-coder-32b-instruct",
+            "@cf/qwen/qwen1.5-14b-chat-awq",
+            "@cf/qwen/qwen1.5-7b-chat-awq",
+            "@cf/qwen/qwen1.5-1.8b-chat",
+            "@cf/qwen/qwen1.5-0.5b-chat",
+            "@cf/google/gemma-3-12b-it",
+            "@cf/google/gemma-7b-it-lora",
+            "@cf/google/gemma-2b-it-lora",
+            "@cf/openchat/openchat-3.5-0106",
+            "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+            "@cf/deepseek-ai/deepseek-math-7b-instruct",
+            "@cf/defog/sqlcoder-7b-2"
+          ],
+          "vision": [
+            "@cf/meta/llama-3.2-11b-vision-instruct",
+            "@cf/llava-hf/llava-1.5-7b-hf"
+          ],
+          "reasoning": [
+            "@cf/meta/llama-4-scout-17b-16e-instruct",
+            "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
+            "@cf/deepseek-ai/deepseek-math-7b-instruct"
+          ],
+          "recommended": "@cf/meta/llama-4-scout-17b-16e-instruct"
+        }
+      }
     }
   },
   "servers": [
@@ -184,7 +278,7 @@
     "/v1/chat/completions/structured": {
       "post": {
         "summary": "Create structured chat completion",
-        "description": "Creates a structured model response with JSON schema validation and optional memory support",
+        "description": "Creates a structured model response with JSON schema validation and optional memory support\n\n**Supported Models for Structured Outputs:**\n- **Openai**: 4 models supported (recommended: `gpt-4o-mini`)\n- **Gemini**: 5 models supported (recommended: `gemini-2.5-flash`)\n- **Cloudflare**: 24 models supported (recommended: `@cf/meta/llama-4-scout-17b-16e-instruct`)\n\n*Note: This is a static list. The actual API validation uses current model lists from the server.*\n\n**Supported Models for Structured Outputs:**\n- **Openai**: 4 models supported (recommended: `gpt-4o-mini`)\n- **Gemini**: 5 models supported (recommended: `gemini-2.5-flash`)\n- **Cloudflare**: 24 models supported (recommended: `@cf/meta/llama-4-scout-17b-16e-instruct`)\n\n*Note: This is a static list. The actual API validation uses current model lists from the server.*",
         "security": [
           {
             "bearerAuth": []
@@ -394,11 +488,18 @@
       },
       "ChatMessage": {
         "type": "object",
-        "required": ["role", "content"],
+        "required": [
+          "role",
+          "content"
+        ],
         "properties": {
           "role": {
             "type": "string",
-            "enum": ["system", "user", "assistant"],
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ],
             "description": "The role of the message author"
           },
           "content": {
@@ -415,7 +516,10 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "enum": ["text", "image_url"]
+                      "enum": [
+                        "text",
+                        "image_url"
+                      ]
                     },
                     "text": {
                       "type": "string"
@@ -438,11 +542,14 @@
       },
       "ChatCompletionRequest": {
         "type": "object",
-        "required": ["model", "messages"],
+        "required": [
+          "model",
+          "messages"
+        ],
         "properties": {
           "model": {
             "type": "string",
-            "description": "ID of the model to use",
+            "description": "Model identifier. Examples: gpt-4o-mini, gemini-2.5-flash, @cf/meta/llama-4-scout-17b-16e-instruct",
             "example": "gpt-4",
             "enum": [
               "gpt-4",
@@ -452,6 +559,40 @@
               "gpt-3.5-turbo",
               "@cf/meta/llama-4-scout-17b-16e-instruct",
               "@cf/openai/gpt-oss-120b"
+            ],
+            "x-examples": [
+              {
+                "provider": "openai",
+                "recommended": "gpt-4o-mini",
+                "supported_models": [
+                  "gpt-4o",
+                  "gpt-4o-mini",
+                  "gpt-4o-2024-08-06",
+                  "gpt-4o-mini-2024-07-18"
+                ]
+              },
+              {
+                "provider": "gemini",
+                "recommended": "gemini-2.5-flash",
+                "supported_models": [
+                  "gemini-2.5-pro",
+                  "gemini-2.5-flash",
+                  "gemini-2.5-flash-lite",
+                  "gemini-2.0-flash",
+                  "gemini-2.0-flash-lite"
+                ]
+              },
+              {
+                "provider": "cloudflare",
+                "recommended": "@cf/meta/llama-4-scout-17b-16e-instruct",
+                "supported_models": [
+                  "@cf/meta/llama-4-scout-17b-16e-instruct",
+                  "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                  "@cf/meta/llama-3.1-8b-instruct-fp8",
+                  "@cf/meta/llama-3.1-8b-instruct-awq",
+                  "@cf/meta/llama-3-8b-instruct-awq"
+                ]
+              }
             ]
           },
           "messages": {
@@ -517,7 +658,11 @@
             "properties": {
               "type": {
                 "type": "string",
-                "enum": ["text", "json_object", "json_schema"],
+                "enum": [
+                  "text",
+                  "json_object",
+                  "json_schema"
+                ],
                 "description": "Type of response format"
               },
               "schema": {
@@ -530,11 +675,15 @@
       },
       "StructuredChatCompletionRequest": {
         "type": "object",
-        "required": ["model", "messages", "response_format"],
+        "required": [
+          "model",
+          "messages",
+          "response_format"
+        ],
         "properties": {
           "model": {
             "type": "string",
-            "description": "ID of the model to use",
+            "description": "Model identifier. Examples: gpt-4o-mini, gemini-2.5-flash, @cf/meta/llama-4-scout-17b-16e-instruct",
             "example": "gpt-4",
             "enum": [
               "gpt-4",
@@ -544,6 +693,40 @@
               "gpt-3.5-turbo",
               "@cf/meta/llama-4-scout-17b-16e-instruct",
               "@cf/openai/gpt-oss-120b"
+            ],
+            "x-examples": [
+              {
+                "provider": "openai",
+                "recommended": "gpt-4o-mini",
+                "supported_models": [
+                  "gpt-4o",
+                  "gpt-4o-mini",
+                  "gpt-4o-2024-08-06",
+                  "gpt-4o-mini-2024-07-18"
+                ]
+              },
+              {
+                "provider": "gemini",
+                "recommended": "gemini-2.5-flash",
+                "supported_models": [
+                  "gemini-2.5-pro",
+                  "gemini-2.5-flash",
+                  "gemini-2.5-flash-lite",
+                  "gemini-2.0-flash",
+                  "gemini-2.0-flash-lite"
+                ]
+              },
+              {
+                "provider": "cloudflare",
+                "recommended": "@cf/meta/llama-4-scout-17b-16e-instruct",
+                "supported_models": [
+                  "@cf/meta/llama-4-scout-17b-16e-instruct",
+                  "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                  "@cf/meta/llama-3.1-8b-instruct-fp8",
+                  "@cf/meta/llama-3.1-8b-instruct-awq",
+                  "@cf/meta/llama-3-8b-instruct-awq"
+                ]
+              }
             ]
           },
           "messages": {
@@ -556,11 +739,17 @@
           "response_format": {
             "type": "object",
             "description": "Response format configuration (required for structured endpoints)",
-            "required": ["type", "schema"],
+            "required": [
+              "type",
+              "schema"
+            ],
             "properties": {
               "type": {
                 "type": "string",
-                "enum": ["json_object", "json_schema"],
+                "enum": [
+                  "json_object",
+                  "json_schema"
+                ],
                 "description": "Type of structured response format"
               },
               "schema": {
@@ -623,11 +812,14 @@
       },
       "TextChatCompletionRequest": {
         "type": "object",
-        "required": ["model", "messages"],
+        "required": [
+          "model",
+          "messages"
+        ],
         "properties": {
           "model": {
             "type": "string",
-            "description": "ID of the model to use",
+            "description": "Model identifier. Examples: gpt-4o-mini, gemini-2.5-flash, @cf/meta/llama-4-scout-17b-16e-instruct",
             "example": "gpt-4",
             "enum": [
               "gpt-4",
@@ -637,6 +829,40 @@
               "gpt-3.5-turbo",
               "@cf/meta/llama-4-scout-17b-16e-instruct",
               "@cf/openai/gpt-oss-120b"
+            ],
+            "x-examples": [
+              {
+                "provider": "openai",
+                "recommended": "gpt-4o-mini",
+                "supported_models": [
+                  "gpt-4o",
+                  "gpt-4o-mini",
+                  "gpt-4o-2024-08-06",
+                  "gpt-4o-mini-2024-07-18"
+                ]
+              },
+              {
+                "provider": "gemini",
+                "recommended": "gemini-2.5-flash",
+                "supported_models": [
+                  "gemini-2.5-pro",
+                  "gemini-2.5-flash",
+                  "gemini-2.5-flash-lite",
+                  "gemini-2.0-flash",
+                  "gemini-2.0-flash-lite"
+                ]
+              },
+              {
+                "provider": "cloudflare",
+                "recommended": "@cf/meta/llama-4-scout-17b-16e-instruct",
+                "supported_models": [
+                  "@cf/meta/llama-4-scout-17b-16e-instruct",
+                  "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                  "@cf/meta/llama-3.1-8b-instruct-fp8",
+                  "@cf/meta/llama-3.1-8b-instruct-awq",
+                  "@cf/meta/llama-3-8b-instruct-awq"
+                ]
+              }
             ]
           },
           "messages": {
@@ -700,7 +926,10 @@
       },
       "CompletionRequest": {
         "type": "object",
-        "required": ["model", "prompt"],
+        "required": [
+          "model",
+          "prompt"
+        ],
         "properties": {
           "model": {
             "type": "string",
@@ -725,7 +954,12 @@
       },
       "CompletionWithMemoryRequest": {
         "type": "object",
-        "required": ["model", "prompt", "memory", "memory_keyword"],
+        "required": [
+          "model",
+          "prompt",
+          "memory",
+          "memory_keyword"
+        ],
         "properties": {
           "model": {
             "type": "string",
@@ -790,7 +1024,11 @@
                 },
                 "finish_reason": {
                   "type": "string",
-                  "enum": ["stop", "length", "content_filter"]
+                  "enum": [
+                    "stop",
+                    "length",
+                    "content_filter"
+                  ]
                 }
               }
             }

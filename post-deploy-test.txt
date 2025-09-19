@@ -1,12 +1,13 @@
-Post-Deployment Test Results - Fri Sep 19 10:24:10 PDT 2025
+Post-Deployment Test Results - Fri Sep 19 10:58:15 PDT 2025
 ========================================
 
 [0;34m🚀 Starting Post-Deployment Tests[0m
 [0;34mWorker URL: https://openai-api-worker.hacolby.workers.dev[0m
+[0;34mAPI Key: 6502241638...[0m
 [0;34mOutput file: post-deploy-test.txt[0m
 [0;34m=== 🏥 Health Check ===[0m
-[0;31m❌ Health check failed[0m
-Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T17:24:11.136Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
+[0;32m✅ Health check passed[0m
+Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T17:58:15.915Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
 [0;34m=== 📋 Models List ===[0m
 [0;32m✅ Models endpoint working[0m
 Found 173 models
@@ -16,112 +17,37 @@ Sample models:
   • gpt-3.5-turbo (openai)
 [0;34m=== 💬 Basic Chat Completions ===[0m
 [0;32m✅ Basic chat completions working[0m
-Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here and ready to assist you. How can I help you today?
+Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here and ready to help you with anything you need. How can I assist you today?
 [0;34m=== 🧠 Memory-Enabled Completions ===[0m
-[0;31m❌ Memory-enabled completions failed[0m
-Response: <!DOCTYPE html>
-<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
-<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
-<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!--<![endif]-->
-<head>
-<title>Worker threw exception | openai-api-worker.hacolby.workers.dev | Cloudflare</title>
-<meta charset="UTF-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-<meta name="robots" content="noindex, nofollow" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="stylesheet" id="cf_styles-css" href="/cdn-cgi/styles/cf.errors.css" />
-<!--[if lt IE 9]><link rel="stylesheet" id='cf_styles-ie-css' href="/cdn-cgi/styles/cf.errors.ie.css" /><![endif]-->
-<style>body{margin:0;padding:0}</style>
-
-
-<!--[if gte IE 10]><!-->
-<script>
-  if (!navigator.cookieEnabled) {
-    window.addEventListener('DOMContentLoaded', function () {
-      var cookieEl = document.getElementById('cookie-alert');
-      cookieEl.style.display = 'block';
-    })
-  }
-</script>
-<!--<![endif]-->
-
-
-</head>
-<body>
-  <div id="cf-wrapper">
-    <div class="cf-alert cf-alert-error cf-cookie-error" id="cookie-alert" data-translate="enable_cookies">Please enable cookies.</div>
-    <div id="cf-error-details" class="cf-error-details-wrapper">
-      <div class="cf-wrapper cf-header cf-error-overview">
-        <h1>
-          <span class="cf-error-type" data-translate="error">Error</span>
-          <span class="cf-error-code">1101</span>
-          <small class="heading-ray-id">Ray ID: 981ac685f8d049aa &bull; 2025-09-19 17:24:15 UTC</small>
-        </h1>
-        <h2 class="cf-subheadline" data-translate="error_desc">Worker threw exception</h2>
-      </div><!-- /.header -->
-
-      <section></section><!-- spacer -->
-
-      <div class="cf-section cf-wrapper">
-        <div class="cf-columns two">
-          <div class="cf-column">
-            <h2 data-translate="what_happened">What happened?</h2>
-            <p>You've requested a page on a website (openai-api-worker.hacolby.workers.dev) that is on the <a href="https://www.cloudflare.com/5xx-error-landing/" target="_blank">Cloudflare</a> network. An unknown error occurred while rendering the page.</p>
-          </div>
-
-          
-          <div class="cf-column">
-            <h2 data-translate="what_can_i_do">What can I do?</h2>
-            <p><strong>If you are the owner of this website:</strong><br />refer to <a href="https://developers.cloudflare.com/workers/observability/errors/" target="_blank">Workers - Errors and Exceptions</a> and check Workers Logs for openai-api-worker.hacolby.workers.dev.</p>
-          </div>
-          
-        </div>
-      </div><!-- /.section -->
-
-      <div class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
-  <p class="text-13">
-    <span class="cf-footer-item sm:block sm:mb-1">Cloudflare Ray ID: <strong class="font-semibold">981ac685f8d049aa</strong></span>
-    <span class="cf-footer-separator sm:hidden">&bull;</span>
-    <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
-      Your IP:
-      <button type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">Click to reveal</button>
-      <span class="hidden" id="cf-footer-ip">76.126.145.182</span>
-      <span class="cf-footer-separator sm:hidden">&bull;</span>
-    </span>
-    <span class="cf-footer-item sm:block sm:mb-1"><span>Performance &amp; security by</span> <a rel="noopener noreferrer" href="https://www.cloudflare.com/5xx-error-landing" id="brand_link" target="_blank">Cloudflare</a></span>
-    
-  </p>
-  <script>(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
-</div><!-- /.error-footer -->
-
-
-    </div><!-- /#cf-error-details -->
-  </div><!-- /#cf-wrapper -->
-
-  <script>
-  window._cf_translation = {};
-  
-  
-</script>
-
-</body>
-</html>
+[0;32m✅ Memory-enabled completions working[0m
+Response: Hello Alice, nice to meet you. I will do my best to remember your name.
+[0;34m=== 🧠 Memory Follow-up Test ===[0m
+[0;32m✅ Memory follow-up working[0m
+Response: I apologize, but I do not have access to personal information such as your name. If you'd
 [0;34m=== 📋 Structured Completions ===[0m
-[0;31m❌ Structured completions failed[0m
-Response: {"error":{"message":"OpenAI API error","type":"api_error","details":"400 Missing required parameter: 'response_format.json_schema'.","request_id":"bwf3zvx3q27"}}
+[0;34mTesting OpenAI structured completions...[0m
+[0;32m✅ OpenAI structured completions working[0m
+Response: {"name":"Alice","age":30,"city":"New York"}
+[0;34mTesting Gemini structured completions...[0m
+[0;31m❌ Gemini structured completions failed[0m
+Response: {"error":{"message":"Model 'gemini-1.5-flash' does not support structured outputs. Please use one of the following supported models:","type":"invalid_request_error","code":"unsupported_model","available_models":["gemini-2.5-pro","gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.0-flash","gemini-2.0-flash-lite"],"provider":"gemini"}}
+[0;34mTesting Cloudflare structured completions...[0m
+[0;32m✅ Cloudflare structured completions working[0m
+Response: {
+  "name": "Emily",
+  "age": 30,
+  "city": "New York"
+}
 [0;34m=== 📝 Text-Only Completions ===[0m
 [0;32m✅ Text-only completions working[0m
 Response: Hello! How can I assist you today?
 [0;34m=== 🔄 Legacy Completions ===[0m
-[0;31m❌ Legacy completions failed[0m
-Response: {"id":"chatcmpl-CHZ8EaDGlf8cUiebs8bgcRxDBlmgJ","object":"chat.completion","created":1758302658,"model":"gpt-3.5-turbo-0125","choices":[{"index":0,"message":{"role":"assistant","content":"Hello there! How can I assist you today?","refusal":null,"annotations":[]},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":10,"total_tokens":19,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0},"completion_tokens_details":{"reasoning_tokens":0,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0}},"service_tier":"default","system_fingerprint":null}
+[0;32m✅ Legacy completions working[0m
+Response: Hello! How can I assist you today?
 [0;34m=== 🔒 Authentication Test ===[0m
 [0;32m✅ Authentication properly enforced[0m
 [0;34m=== 🚫 404 Handling ===[0m
-[1;33m⚠️  404 handling unexpected result[0m
-Response: {"error":{"message":"Missing Authorization header","type":"invalid_request_error"}}
+[0;32m✅ 404 handling working[0m
 [0;34m=== 🚫 Memory Error Handling ===[0m
 [0;32m✅ Memory validation working[0m
 [0;34m=== 🔄 Multi-Provider Model Testing ===[0m
@@ -183,8 +109,8 @@ Found Cloudflare models:
   • @cf/defog/sqlcoder-7b-2
   • @cf/openchat/openchat-3.5-0106
 Testing Cloudflare model: @cf/openai/gpt-oss-120b
-[0;31m❌ Cloudflare model failed: @cf/openai/gpt-oss-120b[0m
-Response: {"error":{"message":"Cloudflare AI error","type":"api_error","details":"5006: Error: oneOf at '/' not met, 0 matches: required properties at '/' are 'input', required properties at '/' are 'requests'","request_id":"djiypq3xqc6"}}
+[0;32m✅ Cloudflare model working: @cf/openai/gpt-oss-120b[0m
+Response: {"id":"resp_3c6e4adb5faa4903b61f84bfd7054667","created_at":1758304706,"instructions":null,"metadata":null,"model":"@cf/openai/gpt-oss-120b","object":"response","output":[{"id":"rs_c0d203a0cb37486e9372a3fc9d54752d","content":[{"text":"The user says \"Hello\". Simple greeting. We need to respond politely. Possibly ask how can assist.","type":"reasoning_text"}],"summary":[],"type":"reasoning","encrypted_content":null,"status":null},{"id":"msg_e7b0099e69e54e3489f5e0dc4625494e","content":[{"annotations":[],"text":"Hello! How can I help you today?","type":"output_text","logprobs":null}],"role":"assistant","status":"completed","type":"message"}],"parallel_tool_calls":true,"temperature":1,"tool_choice":"auto","tools":[],"top_p":1,"background":false,"max_output_tokens":130998,"max_tool_calls":null,"previous_response_id":null,"prompt":null,"reasoning":null,"service_tier":"auto","status":"completed","text":null,"top_logprobs":0,"truncation":"disabled","usage":{"prompt_tokens":3,"completion_tokens":32,"total_tokens":35},"user":null}
 [0;34m=== ⚡ Performance Test ===[0m
 [0;32m✅ Performance test passed[0m
 Response time: 1s

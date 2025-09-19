@@ -14,7 +14,19 @@ NC='\033[0m' # No Color
 
 # Configuration
 WORKER_URL="https://openai-api-worker.hacolby.workers.dev"
-API_KEY="sk-test-key-12345"
+
+# Load API key from .dev.vars
+if [ -f ".dev.vars" ]; then
+    API_KEY=$(grep "^WORKER_API_KEY=" .dev.vars | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    if [ -z "$API_KEY" ]; then
+        echo "❌ WORKER_API_KEY not found in .dev.vars"
+        exit 1
+    fi
+    echo "✅ Loaded API key from .dev.vars"
+else
+    echo "❌ .dev.vars file not found"
+    exit 1
+fi
 
 # Output file
 OUTPUT_FILE="post-deploy-test.txt"
@@ -51,6 +63,7 @@ echo "" >> "$OUTPUT_FILE"
 
 log_info "🚀 Starting Post-Deployment Tests"
 log_info "Worker URL: $WORKER_URL"
+log_info "API Key: ${API_KEY:0:10}..." # Show first 10 chars for security
 log_info "Output file: $OUTPUT_FILE"
 echo ""
 
@@ -150,11 +163,14 @@ echo ""
 
 # Test 5: Structured Completions
 log_info "=== 📋 Structured Completions ==="
-STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/structured" \
+
+# Test OpenAI structured completions
+log_info "Testing OpenAI structured completions..."
+OPENAI_STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/structured" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $API_KEY" \
   -d '{
-    "model": "gpt-3.5-turbo",
+    "model": "gpt-4o-mini",
     "messages": [
       {"role": "user", "content": "Tell me about a person with name, age, and city"}
     ],
@@ -162,6 +178,7 @@ STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/structure
     "response_format": {
       "type": "json_schema",
       "schema": {
+        "name": "person_schema",
         "type": "object",
         "properties": {
           "name": {"type": "string"},
@@ -173,12 +190,80 @@ STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/structure
     }
   }')
 
-if echo "$STRUCTURED_RESPONSE" | jq -e '.choices[0].message.content' > /dev/null 2>&1; then
-    log_success "✅ Structured completions working"
-    log "Response: $(echo "$STRUCTURED_RESPONSE" | jq -r '.choices[0].message.content')"
+if echo "$OPENAI_STRUCTURED_RESPONSE" | jq -e '.choices[0].message.content' > /dev/null 2>&1; then
+    log_success "✅ OpenAI structured completions working"
+    log "Response: $(echo "$OPENAI_STRUCTURED_RESPONSE" | jq -r '.choices[0].message.content')"
 else
-    log_error "❌ Structured completions failed"
-    log "Response: $STRUCTURED_RESPONSE"
+    log_error "❌ OpenAI structured completions failed"
+    log "Response: $OPENAI_STRUCTURED_RESPONSE"
+fi
+
+# Test Gemini structured completions
+log_info "Testing Gemini structured completions..."
+GEMINI_STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/structured" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "model": "gemini-2.5-flash",
+    "messages": [
+      {"role": "user", "content": "Tell me about a person with name, age, and city"}
+    ],
+    "max_tokens": 100,
+    "response_format": {
+      "type": "json_schema",
+      "schema": {
+        "name": "person_schema",
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "age": {"type": "number"},
+          "city": {"type": "string"}
+        },
+        "required": ["name", "age", "city"]
+      }
+    }
+  }')
+
+if echo "$GEMINI_STRUCTURED_RESPONSE" | jq -e '.choices[0].message.content' > /dev/null 2>&1; then
+    log_success "✅ Gemini structured completions working"
+    log "Response: $(echo "$GEMINI_STRUCTURED_RESPONSE" | jq -r '.choices[0].message.content')"
+else
+    log_error "❌ Gemini structured completions failed"
+    log "Response: $GEMINI_STRUCTURED_RESPONSE"
+fi
+
+# Test Cloudflare structured completions
+log_info "Testing Cloudflare structured completions..."
+CLOUDFLARE_STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/structured" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_KEY" \
+  -d '{
+    "model": "@cf/meta/llama-4-scout-17b-16e-instruct",
+    "messages": [
+      {"role": "user", "content": "Tell me about a person with name, age, and city"}
+    ],
+    "max_tokens": 100,
+    "response_format": {
+      "type": "json_schema",
+      "schema": {
+        "name": "person_schema",
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "age": {"type": "number"},
+          "city": {"type": "string"}
+        },
+        "required": ["name", "age", "city"]
+      }
+    }
+  }')
+
+if echo "$CLOUDFLARE_STRUCTURED_RESPONSE" | jq -e '.choices[0].message.content' > /dev/null 2>&1; then
+    log_success "✅ Cloudflare structured completions working"
+    log "Response: $(echo "$CLOUDFLARE_STRUCTURED_RESPONSE" | jq -r '.choices[0].message.content')"
+else
+    log_error "❌ Cloudflare structured completions failed"
+    log "Response: $CLOUDFLARE_STRUCTURED_RESPONSE"
 fi
 echo ""
 
