@@ -41,7 +41,10 @@ export async function handleOpenAIRequest(params: any, env: Env, corsHeaders: Re
         
         const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
         
-        const completion = await openai.chat.completions.create(params);
+        // Filter out internal parameters that shouldn't be sent to the API
+        const { modelType, originalModel, memory, memory_keyword, ...apiParams } = params;
+        
+        const completion = await openai.chat.completions.create(apiParams);
 
         if (params.stream) {
             // For streaming responses, return the SDK's stream directly.
