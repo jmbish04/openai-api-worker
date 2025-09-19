@@ -71,7 +71,7 @@ export async function handleChatCompletions(request: Request, env: Env, corsHead
         // Save memory context if memory is enabled and response is successful
         if (memory && memory_keyword && response.ok) {
             try {
-                const responseData = await response.clone().json();
+                const responseData = await response.clone().json() as any;
                 const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                 if (assistantMessage) {
                     await saveMemoryContext(messages, assistantMessage, memory_keyword, env);
@@ -144,7 +144,7 @@ export async function handleStructuredChatCompletions(request: Request, env: Env
         // Save memory context if memory is enabled and response is successful
         if (memory && memory_keyword && response.ok) {
             try {
-                const responseData = await response.clone().json();
+                const responseData = await response.clone().json() as any;
                 const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                 if (assistantMessage) {
                     await saveMemoryContext(messages, assistantMessage, memory_keyword, env);
@@ -212,7 +212,7 @@ export async function handleTextChatCompletions(request: Request, env: Env, cors
         // Save memory context if memory is enabled and response is successful
         if (memory && memory_keyword && response.ok) {
             try {
-                const responseData = await response.clone().json();
+                const responseData = await response.clone().json() as any;
                 const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                 if (assistantMessage) {
                     await saveMemoryContext(messages, assistantMessage, memory_keyword, env);

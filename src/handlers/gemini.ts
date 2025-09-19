@@ -34,7 +34,7 @@ import { convertOpenAISchemaToGemini } from '../models';
  * @param {Record<string, string>} corsHeaders - CORS headers for the response.
  * @returns {Promise<Response>} A promise resolving to the final `Response` object.
  */
-async function handleGeminiRequest(params: any, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
+export async function handleGeminiRequest(params: any, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
     try {
         if (!env.GEMINI_API_KEY) {
             throw new Error('Gemini API key not configured');

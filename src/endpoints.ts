@@ -12,6 +12,7 @@ import type { ApiModel, CompletionRequestBody, CloudflareAIModelsResponse, ChatC
 import { errorLog } from './utils';
 import { handleChatCompletions } from './routing';
 import { saveMemoryContext } from './memory';
+import { GoogleGenAI } from '@google/genai';
 
 import OpenAI from 'openai';
 
@@ -156,9 +157,13 @@ export async function handleTestAPIs(_request: Request, env: Env, corsHeaders: R
     // Test Gemini API
     try {
         if (env.GEMINI_API_KEY) {
-            const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-            const models = await genAI.getGenerativeModel({ model: "gemini-pro" }).listModels();
-            results.tests.gemini = { status: 'PASS', message: `Successfully connected to Gemini API`, models: models.filter((m: any) => m.supportedGenerationMethods?.includes('generateContent')).length };
+            const genAI = new GoogleGenAI({apiKey: env.GEMINI_API_KEY});
+            const modelsPager = await genAI.models.list();
+            const models: any[] = [];
+            for await (const model of modelsPager) {
+                models.push(model);
+            }
+            results.tests.gemini = { status: 'PASS', message: `Successfully connected to Gemini API`, models: models.filter((m: any) => m.supportedActions?.includes('generateContent')).length };
         } else {
             results.tests.gemini = { status: 'FAIL', message: 'Gemini API key not configured', models: 0 };
         }
@@ -243,7 +248,7 @@ export async function handleCompletionsWithMemory(request: Request, env: Env, co
             // Save memory context if the response was successful
             if (response.ok) {
                 try {
-                    const responseData = await response.json();
+                    const responseData = await response.json() as any;
                     const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                     if (assistantMessage) {
                         await saveMemoryContext(
@@ -274,7 +279,7 @@ export async function handleCompletionsWithMemory(request: Request, env: Env, co
         // Save memory context if the response was successful
         if (response.ok && body.messages) {
             try {
-                const responseData = await response.json();
+                const responseData = await response.json() as any;
                 const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                 if (assistantMessage) {
                     await saveMemoryContext(
