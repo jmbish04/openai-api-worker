@@ -248,7 +248,7 @@ export async function handleCompletionsWithMemory(request: Request, env: Env, co
             // Save memory context if the response was successful
             if (response.ok) {
                 try {
-                    const responseData = await response.json() as any;
+                    const responseData = await response.clone().json() as any;
                     const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                     if (assistantMessage) {
                         await saveMemoryContext(
@@ -279,7 +279,7 @@ export async function handleCompletionsWithMemory(request: Request, env: Env, co
         // Save memory context if the response was successful
         if (response.ok && body.messages) {
             try {
-                const responseData = await response.json() as any;
+                const responseData = await response.clone().json() as any;
                 const assistantMessage = responseData.choices?.[0]?.message?.content || '';
                 if (assistantMessage) {
                     await saveMemoryContext(

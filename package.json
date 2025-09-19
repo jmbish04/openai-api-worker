@@ -11,6 +11,7 @@
     "tail": "npx wrangler tail",
     "logs": "./logs.sh",
     "test:worker-endpoints": "bash post-deploy-test.sh",
+    "post-deploy-test": "bash post-deploy-test.sh",
     "test:post-deploy": "echo 'Running post-deployment tests...' && pnpm run test:worker-endpoints && pnpm run test:service-binding && pnpm run test:core-api",
     "test:service-binding": "node test/service-binding-test.js",
     "test:core-api": "node test/core-api-test.js",

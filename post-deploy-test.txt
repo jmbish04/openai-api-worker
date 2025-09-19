@@ -1,0 +1,241 @@
+Post-Deployment Test Results - Fri Sep 19 10:24:10 PDT 2025
+========================================
+
+[0;34m🚀 Starting Post-Deployment Tests[0m
+[0;34mWorker URL: https://openai-api-worker.hacolby.workers.dev[0m
+[0;34mOutput file: post-deploy-test.txt[0m
+[0;34m=== 🏥 Health Check ===[0m
+[0;31m❌ Health check failed[0m
+Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T17:24:11.136Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
+[0;34m=== 📋 Models List ===[0m
+[0;32m✅ Models endpoint working[0m
+Found 173 models
+Sample models:
+  • gpt-4 (openai)
+  • gpt-4o (openai)
+  • gpt-3.5-turbo (openai)
+[0;34m=== 💬 Basic Chat Completions ===[0m
+[0;32m✅ Basic chat completions working[0m
+Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here and ready to assist you. How can I help you today?
+[0;34m=== 🧠 Memory-Enabled Completions ===[0m
+[0;31m❌ Memory-enabled completions failed[0m
+Response: <!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7 oldie" lang="en-US"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8 oldie" lang="en-US"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en-US"> <!--<![endif]-->
+<head>
+<title>Worker threw exception | openai-api-worker.hacolby.workers.dev | Cloudflare</title>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" id="cf_styles-css" href="/cdn-cgi/styles/cf.errors.css" />
+<!--[if lt IE 9]><link rel="stylesheet" id='cf_styles-ie-css' href="/cdn-cgi/styles/cf.errors.ie.css" /><![endif]-->
+<style>body{margin:0;padding:0}</style>
+
+
+<!--[if gte IE 10]><!-->
+<script>
+  if (!navigator.cookieEnabled) {
+    window.addEventListener('DOMContentLoaded', function () {
+      var cookieEl = document.getElementById('cookie-alert');
+      cookieEl.style.display = 'block';
+    })
+  }
+</script>
+<!--<![endif]-->
+
+
+</head>
+<body>
+  <div id="cf-wrapper">
+    <div class="cf-alert cf-alert-error cf-cookie-error" id="cookie-alert" data-translate="enable_cookies">Please enable cookies.</div>
+    <div id="cf-error-details" class="cf-error-details-wrapper">
+      <div class="cf-wrapper cf-header cf-error-overview">
+        <h1>
+          <span class="cf-error-type" data-translate="error">Error</span>
+          <span class="cf-error-code">1101</span>
+          <small class="heading-ray-id">Ray ID: 981ac685f8d049aa &bull; 2025-09-19 17:24:15 UTC</small>
+        </h1>
+        <h2 class="cf-subheadline" data-translate="error_desc">Worker threw exception</h2>
+      </div><!-- /.header -->
+
+      <section></section><!-- spacer -->
+
+      <div class="cf-section cf-wrapper">
+        <div class="cf-columns two">
+          <div class="cf-column">
+            <h2 data-translate="what_happened">What happened?</h2>
+            <p>You've requested a page on a website (openai-api-worker.hacolby.workers.dev) that is on the <a href="https://www.cloudflare.com/5xx-error-landing/" target="_blank">Cloudflare</a> network. An unknown error occurred while rendering the page.</p>
+          </div>
+
+          
+          <div class="cf-column">
+            <h2 data-translate="what_can_i_do">What can I do?</h2>
+            <p><strong>If you are the owner of this website:</strong><br />refer to <a href="https://developers.cloudflare.com/workers/observability/errors/" target="_blank">Workers - Errors and Exceptions</a> and check Workers Logs for openai-api-worker.hacolby.workers.dev.</p>
+          </div>
+          
+        </div>
+      </div><!-- /.section -->
+
+      <div class="cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300">
+  <p class="text-13">
+    <span class="cf-footer-item sm:block sm:mb-1">Cloudflare Ray ID: <strong class="font-semibold">981ac685f8d049aa</strong></span>
+    <span class="cf-footer-separator sm:hidden">&bull;</span>
+    <span id="cf-footer-item-ip" class="cf-footer-item hidden sm:block sm:mb-1">
+      Your IP:
+      <button type="button" id="cf-footer-ip-reveal" class="cf-footer-ip-reveal-btn">Click to reveal</button>
+      <span class="hidden" id="cf-footer-ip">76.126.145.182</span>
+      <span class="cf-footer-separator sm:hidden">&bull;</span>
+    </span>
+    <span class="cf-footer-item sm:block sm:mb-1"><span>Performance &amp; security by</span> <a rel="noopener noreferrer" href="https://www.cloudflare.com/5xx-error-landing" id="brand_link" target="_blank">Cloudflare</a></span>
+    
+  </p>
+  <script>(function(){function d(){var b=a.getElementById("cf-footer-item-ip"),c=a.getElementById("cf-footer-ip-reveal");b&&"classList"in b&&(b.classList.remove("hidden"),c.addEventListener("click",function(){c.classList.add("hidden");a.getElementById("cf-footer-ip").classList.remove("hidden")}))}var a=document;document.addEventListener&&a.addEventListener("DOMContentLoaded",d)})();</script>
+</div><!-- /.error-footer -->
+
+
+    </div><!-- /#cf-error-details -->
+  </div><!-- /#cf-wrapper -->
+
+  <script>
+  window._cf_translation = {};
+  
+  
+</script>
+
+</body>
+</html>
+[0;34m=== 📋 Structured Completions ===[0m
+[0;31m❌ Structured completions failed[0m
+Response: {"error":{"message":"OpenAI API error","type":"api_error","details":"400 Missing required parameter: 'response_format.json_schema'.","request_id":"bwf3zvx3q27"}}
+[0;34m=== 📝 Text-Only Completions ===[0m
+[0;32m✅ Text-only completions working[0m
+Response: Hello! How can I assist you today?
+[0;34m=== 🔄 Legacy Completions ===[0m
+[0;31m❌ Legacy completions failed[0m
+Response: {"id":"chatcmpl-CHZ8EaDGlf8cUiebs8bgcRxDBlmgJ","object":"chat.completion","created":1758302658,"model":"gpt-3.5-turbo-0125","choices":[{"index":0,"message":{"role":"assistant","content":"Hello there! How can I assist you today?","refusal":null,"annotations":[]},"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":10,"total_tokens":19,"prompt_tokens_details":{"cached_tokens":0,"audio_tokens":0},"completion_tokens_details":{"reasoning_tokens":0,"audio_tokens":0,"accepted_prediction_tokens":0,"rejected_prediction_tokens":0}},"service_tier":"default","system_fingerprint":null}
+[0;34m=== 🔒 Authentication Test ===[0m
+[0;32m✅ Authentication properly enforced[0m
+[0;34m=== 🚫 404 Handling ===[0m
+[1;33m⚠️  404 handling unexpected result[0m
+Response: {"error":{"message":"Missing Authorization header","type":"invalid_request_error"}}
+[0;34m=== 🚫 Memory Error Handling ===[0m
+[0;32m✅ Memory validation working[0m
+[0;34m=== 🔄 Multi-Provider Model Testing ===[0m
+Testing Cloudflare models...
+Found Cloudflare models:
+  • @cf/openai/gpt-oss-120b
+  • @cf/openai/gpt-oss-20b
+  • @cf/qwen/qwen1.5-0.5b-chat
+  • @cf/qwen/qwen1.5-7b-chat-awq
+  • @cf/qwen/qwen2.5-coder-32b-instruct
+  • @cf/qwen/qwen1.5-1.8b-chat
+  • @cf/qwen/qwen1.5-14b-chat-awq
+  • @cf/qwen/qwq-32b
+  • @cf/baai/bge-m3
+  • @cf/baai/bge-small-en-v1.5
+  • @cf/baai/bge-base-en-v1.5
+  • @cf/baai/bge-reranker-base
+  • @cf/baai/bge-large-en-v1.5
+  • @cf/huggingface/distilbert-sst-2-int8
+  • @cf/google/gemma-2b-it-lora
+  • @cf/google/gemma-7b-it-lora
+  • @cf/google/embeddinggemma-300m
+  • @cf/google/gemma-3-12b-it
+  • @cf/meta/llama-3-8b-instruct
+  • @cf/meta/llama-3.2-3b-instruct
+  • @cf/meta/llama-guard-3-8b
+  • @cf/meta/llama-2-7b-chat-fp16
+  • @cf/meta/llama-2-7b-chat-int8
+  • @cf/meta/llama-3.1-8b-instruct-fp8
+  • @cf/meta/llama-3.2-1b-instruct
+  • @cf/meta/llama-3.3-70b-instruct-fp8-fast
+  • @cf/meta/llama-3.1-8b-instruct-awq
+  • @cf/meta/llama-3-8b-instruct-awq
+  • @cf/meta/llama-3.2-11b-vision-instruct
+  • @cf/meta/llama-4-scout-17b-16e-instruct
+  • @cf/thebloke/discolm-german-7b-v1-awq
+  • @cf/mistral/mistral-7b-instruct-v0.1
+  • @cf/mistral/mistral-7b-instruct-v0.2-lora
+  • @cf/myshell-ai/melotts
+  • @cf/tinyllama/tinyllama-1.1b-chat-v1.0
+  • @cf/fblgit/una-cybertron-7b-v2-bf16
+  • @cf/llava-hf/llava-1.5-7b-hf
+  • @cf/deepseek-ai/deepseek-r1-distill-qwen-32b
+  • @cf/deepseek-ai/deepseek-math-7b-instruct
+  • @cf/runwayml/stable-diffusion-v1-5-inpainting
+  • @cf/runwayml/stable-diffusion-v1-5-img2img
+  • @cf/deepgram/aura-1
+  • @cf/black-forest-labs/flux-1-schnell
+  • @cf/microsoft/phi-2
+  • @cf/bytedance/stable-diffusion-xl-lightning
+  • @cf/meta-llama/llama-2-7b-chat-hf-lora
+  • @cf/lykon/dreamshaper-8-lcm
+  • @cf/leonardo/phoenix-1.0
+  • @cf/leonardo/lucid-origin
+  • @cf/stabilityai/stable-diffusion-xl-base-1.0
+  • @cf/tiiuae/falcon-7b-instruct
+  • @cf/unum/uform-gen2-qwen-500m
+  • @cf/mistralai/mistral-small-3.1-24b-instruct
+  • @cf/defog/sqlcoder-7b-2
+  • @cf/openchat/openchat-3.5-0106
+Testing Cloudflare model: @cf/openai/gpt-oss-120b
+[0;31m❌ Cloudflare model failed: @cf/openai/gpt-oss-120b[0m
+Response: {"error":{"message":"Cloudflare AI error","type":"api_error","details":"5006: Error: oneOf at '/' not met, 0 matches: required properties at '/' are 'input', required properties at '/' are 'requests'","request_id":"djiypq3xqc6"}}
+[0;34m=== ⚡ Performance Test ===[0m
+[0;32m✅ Performance test passed[0m
+Response time: 1s
+[0;34m🎉 === Comprehensive Test Summary Complete ===[0m
+
+📍 Worker URL: https://openai-api-worker.hacolby.workers.dev
+🌐 Landing Page: https://openai-api-worker.hacolby.workers.dev/
+📋 OpenAPI Spec: https://openai-api-worker.hacolby.workers.dev/openapi.json
+❤️  Health Check: https://openai-api-worker.hacolby.workers.dev/health
+
+[0;34m=== 🔗 Core API Integration Summary ===[0m
+[0;32m✅ Core API integration: ACTIVE[0m
+📊 Dynamic model discovery: 173 models available
+📋 Enhanced metadata: Available
+
+[0;34m=== 🚀 Feature Summary ===[0m
+[0;32m✅ Core Features:[0m
+  • OpenAI-compatible API
+  • Multi-provider support (OpenAI, Gemini, Cloudflare)
+  • Streaming and non-streaming responses
+  • Memory-enabled conversations
+  • Structured JSON responses
+  • Legacy completions support
+  • Comprehensive error handling
+  • CORS support
+  • Authentication
+
+🔧 Available Endpoints:
+  • GET  /health - Health check
+  • GET  /v1/models - List all available models
+  • POST /v1/chat/completions - Standard chat completions
+  • POST /v1/chat/completions/structured - JSON schema responses
+  • /v1/chat/completions/text - Text-only responses
+  • POST /v1/completions - Legacy prompt-based completions
+  • POST /v1/completions/withmemory - Memory-enabled completions
+  • GET  /openapi.json - OpenAPI 3.0 specification
+  • GET  / - Interactive landing page
+
+🧠 Memory Features:
+  • KV-based conversation memory
+  • Keyword-based memory isolation
+  • Cross-request context persistence
+  • Memory validation and error handling
+
+🔄 Model Providers:
+  • OpenAI: GPT models with full API compatibility
+  • Google Gemini: Advanced reasoning models
+  • Cloudflare AI: Edge-optimized models
+  • Dynamic model discovery via Core API
+
+[0;32m🚀 Ready to use! Try opening https://openai-api-worker.hacolby.workers.dev in your browser.[0m
+📖 Check the OpenAPI spec at https://openai-api-worker.hacolby.workers.dev/openapi.json for detailed documentation.
+
+📄 Full test results saved to: post-deploy-test.txt

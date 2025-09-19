@@ -43,7 +43,7 @@ export function getModelType(model: string, provider: Provider): ModelType {
         const m = model.toLowerCase();
         if (m.includes('llama-4')) return 'llama4'; // Models supporting chat messages
         if (m.includes('llama')) return 'llama';   // Models requiring specific prompt templating
-        if (m.includes('openai') || m.includes('gpt-oss')) return 'openai';
+        if (m.includes('openai') || m.includes('gpt-oss')) return 'llama4';
     }
     if (provider === 'openai') return 'openai';
     if (provider === 'gemini') return 'gemini';
