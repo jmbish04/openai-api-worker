@@ -1,4 +1,4 @@
-Post-Deployment Test Results - Fri Sep 19 10:58:15 PDT 2025
+Post-Deployment Test Results - Fri Sep 19 10:59:32 PDT 2025
 ========================================
 
 [0;34m🚀 Starting Post-Deployment Tests[0m
@@ -7,7 +7,7 @@ Post-Deployment Test Results - Fri Sep 19 10:58:15 PDT 2025
 [0;34mOutput file: post-deploy-test.txt[0m
 [0;34m=== 🏥 Health Check ===[0m
 [0;32m✅ Health check passed[0m
-Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T17:58:15.915Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
+Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T17:59:32.689Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
 [0;34m=== 📋 Models List ===[0m
 [0;32m✅ Models endpoint working[0m
 Found 173 models
@@ -17,7 +17,7 @@ Sample models:
   • gpt-3.5-turbo (openai)
 [0;34m=== 💬 Basic Chat Completions ===[0m
 [0;32m✅ Basic chat completions working[0m
-Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here and ready to help you with anything you need. How can I assist you today?
+Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here and ready to assist you with anything you need. How can I help you today?
 [0;34m=== 🧠 Memory-Enabled Completions ===[0m
 [0;32m✅ Memory-enabled completions working[0m
 Response: Hello Alice, nice to meet you. I will do my best to remember your name.
@@ -26,17 +26,17 @@ Response: Hello Alice, nice to meet you. I will do my best to remember your name
 Response: I apologize, but I do not have access to personal information such as your name. If you'd
 [0;34m=== 📋 Structured Completions ===[0m
 [0;34mTesting OpenAI structured completions...[0m
-[0;32m✅ OpenAI structured completions working[0m
-Response: {"name":"Alice","age":30,"city":"New York"}
+[0;31m❌ OpenAI structured completions failed[0m
+Response: {"error":{"message":"OpenAI API error","type":"api_error","details":"400 Invalid schema for response_format 'person_schema': In context=(), 'additionalProperties' is required to be supplied and to be false.","request_id":"325b4lojnxq"}}
 [0;34mTesting Gemini structured completions...[0m
-[0;31m❌ Gemini structured completions failed[0m
-Response: {"error":{"message":"Model 'gemini-1.5-flash' does not support structured outputs. Please use one of the following supported models:","type":"invalid_request_error","code":"unsupported_model","available_models":["gemini-2.5-pro","gemini-2.5-flash","gemini-2.5-flash-lite","gemini-2.0-flash","gemini-2.0-flash-lite"],"provider":"gemini"}}
+[0;32m✅ Gemini structured completions working[0m
+Response: {"name":"Alice Johnson","age":30,"city":"New York"}
 [0;34mTesting Cloudflare structured completions...[0m
 [0;32m✅ Cloudflare structured completions working[0m
 Response: {
-  "name": "Emily",
-  "age": 30,
-  "city": "New York"
+  "name": "Emily Wilson",
+  "age": 32,
+  "city": "San Francisco"
 }
 [0;34m=== 📝 Text-Only Completions ===[0m
 [0;32m✅ Text-only completions working[0m
@@ -110,10 +110,10 @@ Found Cloudflare models:
   • @cf/openchat/openchat-3.5-0106
 Testing Cloudflare model: @cf/openai/gpt-oss-120b
 [0;32m✅ Cloudflare model working: @cf/openai/gpt-oss-120b[0m
-Response: {"id":"resp_3c6e4adb5faa4903b61f84bfd7054667","created_at":1758304706,"instructions":null,"metadata":null,"model":"@cf/openai/gpt-oss-120b","object":"response","output":[{"id":"rs_c0d203a0cb37486e9372a3fc9d54752d","content":[{"text":"The user says \"Hello\". Simple greeting. We need to respond politely. Possibly ask how can assist.","type":"reasoning_text"}],"summary":[],"type":"reasoning","encrypted_content":null,"status":null},{"id":"msg_e7b0099e69e54e3489f5e0dc4625494e","content":[{"annotations":[],"text":"Hello! How can I help you today?","type":"output_text","logprobs":null}],"role":"assistant","status":"completed","type":"message"}],"parallel_tool_calls":true,"temperature":1,"tool_choice":"auto","tools":[],"top_p":1,"background":false,"max_output_tokens":130998,"max_tool_calls":null,"previous_response_id":null,"prompt":null,"reasoning":null,"service_tier":"auto","status":"completed","text":null,"top_logprobs":0,"truncation":"disabled","usage":{"prompt_tokens":3,"completion_tokens":32,"total_tokens":35},"user":null}
+Response: {"id":"resp_4e8fb9cc2cd446248e77a9d67e855e1d","created_at":1758304785,"instructions":null,"metadata":null,"model":"@cf/openai/gpt-oss-120b","object":"response","output":[{"id":"rs_987cf2c9a8894908a5417b08cfd20c5d","content":[{"text":"We need to respond as ChatGPT. The user just says \"Hello\". Simple greeting. Should respond politely.","type":"reasoning_text"}],"summary":[],"type":"reasoning","encrypted_content":null,"status":null},{"id":"msg_a5a2c37f92eb493eb9d8b9d1c56b3f25","content":[{"annotations":[],"text":"Hello! How can I assist you today?","type":"output_text","logprobs":null}],"role":"assistant","status":"completed","type":"message"}],"parallel_tool_calls":true,"temperature":1,"tool_choice":"auto","tools":[],"top_p":1,"background":false,"max_output_tokens":130998,"max_tool_calls":null,"previous_response_id":null,"prompt":null,"reasoning":null,"service_tier":"auto","status":"completed","text":null,"top_logprobs":0,"truncation":"disabled","usage":{"prompt_tokens":3,"completion_tokens":33,"total_tokens":36},"user":null}
 [0;34m=== ⚡ Performance Test ===[0m
 [0;32m✅ Performance test passed[0m
-Response time: 1s
+Response time: 0s
 [0;34m🎉 === Comprehensive Test Summary Complete ===[0m
 
 📍 Worker URL: https://openai-api-worker.hacolby.workers.dev

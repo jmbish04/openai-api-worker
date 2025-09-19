@@ -185,7 +185,8 @@ OPENAI_STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/st
           "age": {"type": "number"},
           "city": {"type": "string"}
         },
-        "required": ["name", "age", "city"]
+        "required": ["name", "age", "city"],
+        "additionalProperties": false
       }
     }
   }')
@@ -219,7 +220,8 @@ GEMINI_STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completions/st
           "age": {"type": "number"},
           "city": {"type": "string"}
         },
-        "required": ["name", "age", "city"]
+        "required": ["name", "age", "city"],
+        "additionalProperties": false
       }
     }
   }')
@@ -253,7 +255,8 @@ CLOUDFLARE_STRUCTURED_RESPONSE=$(curl -s -X POST "$WORKER_URL/v1/chat/completion
           "age": {"type": "number"},
           "city": {"type": "string"}
         },
-        "required": ["name", "age", "city"]
+        "required": ["name", "age", "city"],
+        "additionalProperties": false
       }
     }
   }')

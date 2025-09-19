@@ -86,12 +86,18 @@ export async function handleOpenAIRequest(params: any, env: Env, corsHeaders: Re
             }
 
             if (supportsJsonSchema(modelId)) {
+                // Ensure additionalProperties is set to false for OpenAI compatibility
+                const normalizedSchema = { ...schema };
+                if (normalizedSchema.type === 'object' && !('additionalProperties' in normalizedSchema)) {
+                    normalizedSchema.additionalProperties = false;
+                }
+                
                 // normalize shape to what OpenAI expects
                 apiParams.response_format = {
                     type: 'json_schema',
                     json_schema: {
                         name: apiParams.response_format.json_schema?.name || apiParams.response_format.schema?.name || 'response_schema',
-                        schema,
+                        schema: normalizedSchema,
                         strict: true
                     }
                 };
@@ -100,12 +106,18 @@ export async function handleOpenAIRequest(params: any, env: Env, corsHeaders: Re
                 // Fallback: convert to tools+strict
                 debugLog(env, 'Model does not support json_schema; falling back to tools+strict', { modelId });
 
+                // Ensure additionalProperties is set to false for consistency
+                const normalizedSchema = { ...schema };
+                if (normalizedSchema.type === 'object' && !('additionalProperties' in normalizedSchema)) {
+                    normalizedSchema.additionalProperties = false;
+                }
+
                 // remove incompatible param
                 delete apiParams.response_format;
 
                 // ensure tools array exists and add our tool
                 apiParams.tools = Array.isArray(apiParams.tools) ? apiParams.tools.slice() : [];
-                apiParams.tools.push(schemaToTool(schema));
+                apiParams.tools.push(schemaToTool(normalizedSchema));
 
                 // force tool_choice to our function to get arguments back
                 apiParams.tool_choice = { type: 'function', function: { name: '__structured_output__' } };
