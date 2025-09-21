@@ -8,7 +8,7 @@
 
 import type { CodexRequestBody, OpenAIMessage, Env } from '../types';
 
-const CODEX_ROUTE_PATTERN = /^\/codex\/workers-ai\/([^/]+)$/;
+export const CODEX_ROUTE_PATTERN = /^\/codex\/workers-ai\/([^/]+)$/;
 
 /**
  * Transforms a Codex-style request payload into the simplified messages format expected
@@ -58,19 +58,6 @@ export function transformCodexToWorkerMessages(codexRequest: CodexRequestBody): 
         return messages;
 }
 
-function deriveModelName(request: Request, providedModel?: string): string | null {
-        if (providedModel) {
-                return providedModel;
-        }
-
-        const match = new URL(request.url).pathname.match(CODEX_ROUTE_PATTERN);
-        if (match?.[1]) {
-                return match[1];
-        }
-
-        return null;
-}
-
 function applyCorsHeaders(headers: Headers, corsHeaders?: Record<string, string>): void {
         if (!corsHeaders) {
                 return;
@@ -79,6 +66,18 @@ function applyCorsHeaders(headers: Headers, corsHeaders?: Record<string, string>
         for (const [key, value] of Object.entries(corsHeaders)) {
                 headers.set(key, value);
         }
+}
+
+function createErrorResponse(
+        message: string,
+        status: number,
+        corsHeaders?: Record<string, string>,
+        extraFields?: Record<string, unknown>,
+): Response {
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        applyCorsHeaders(headers, corsHeaders);
+        const body = { error: message, ...(extraFields ?? {}) };
+        return new Response(JSON.stringify(body), { status, headers });
 }
 
 /**
@@ -90,43 +89,36 @@ export async function handleCodexRequest(
         request: Request,
         env: Env,
         modelFromRoute?: string,
-        corsHeaders?: Record<string, string>
+        corsHeaders?: Record<string, string>,
 ): Promise<Response> {
         if (request.method !== 'POST') {
-                const headers = new Headers({ 'Content-Type': 'application/json' });
-                applyCorsHeaders(headers, corsHeaders);
-                return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405, headers });
+                return createErrorResponse('Method Not Allowed', 405, corsHeaders);
         }
 
         try {
                 const codexRequest = await request.json<CodexRequestBody>();
-                const modelName = deriveModelName(request, modelFromRoute) || codexRequest.model;
+                const modelName = modelFromRoute || codexRequest.model;
 
                 if (!modelName) {
-                        const headers = new Headers({ 'Content-Type': 'application/json' });
-                        applyCorsHeaders(headers, corsHeaders);
-                        return new Response(JSON.stringify({ error: 'Model not specified in URL path or request body.' }), {
-                                status: 400,
-                                headers,
-                        });
-                }
-
-                if (!env.CLOUDFLARE_ACCOUNT_ID) {
-                        const headers = new Headers({ 'Content-Type': 'application/json' });
-                        applyCorsHeaders(headers, corsHeaders);
-                        return new Response(JSON.stringify({ error: 'CLOUDFLARE_ACCOUNT_ID is not configured.' }), {
-                                status: 500,
-                                headers,
-                        });
+                        return createErrorResponse('Model not specified in URL path or request body.', 400, corsHeaders);
                 }
 
                 if (!env.AI) {
-                        const headers = new Headers({ 'Content-Type': 'application/json' });
-                        applyCorsHeaders(headers, corsHeaders);
-                        return new Response(JSON.stringify({ error: 'AI binding is not configured.' }), {
-                                status: 500,
-                                headers,
-                        });
+                        return createErrorResponse('AI binding is not configured.', 500, corsHeaders);
+                }
+
+                let modelIdentifier: string;
+                if (modelName.startsWith('@')) {
+                        modelIdentifier = modelName;
+                } else {
+                        if (!env.CLOUDFLARE_ACCOUNT_ID) {
+                                return createErrorResponse(
+                                        'CLOUDFLARE_ACCOUNT_ID is required to resolve short model names.',
+                                        500,
+                                        corsHeaders,
+                                );
+                        }
+                        modelIdentifier = `@cf/${env.CLOUDFLARE_ACCOUNT_ID}/${modelName}`;
                 }
 
                 const messages = transformCodexToWorkerMessages(codexRequest);
@@ -139,42 +131,27 @@ export async function handleCodexRequest(
                         payload.tools = codexRequest.tools;
                 }
 
-                const modelIdentifier = modelName.startsWith('@cf/')
-                        ? modelName
-                        : `@cf/${env.CLOUDFLARE_ACCOUNT_ID}/${modelName}`;
-
                 const aiResponse = await env.AI.run(modelIdentifier, payload);
+                const isStream = Boolean(codexRequest.stream);
+                const headers = new Headers({
+                        'Content-Type': isStream ? 'application/x-ndjson' : 'application/json',
+                });
+                applyCorsHeaders(headers, corsHeaders);
 
-                if (codexRequest.stream) {
-                        const headers = new Headers({ 'Content-Type': 'application/x-ndjson' });
-                        applyCorsHeaders(headers, corsHeaders);
-
-                        if (aiResponse instanceof ReadableStream) {
-                                return new Response(aiResponse, { headers });
-                        }
-
-                        const body = typeof aiResponse === 'string' ? aiResponse : JSON.stringify(aiResponse);
-                        return new Response(body, { headers });
+                if (isStream && aiResponse instanceof ReadableStream) {
+                        return new Response(aiResponse, { headers });
                 }
 
-                const headers = new Headers({ 'Content-Type': 'application/json' });
-                applyCorsHeaders(headers, corsHeaders);
                 const body = typeof aiResponse === 'string' ? aiResponse : JSON.stringify(aiResponse);
                 return new Response(body, { headers });
         } catch (error) {
                 console.error('Error handling Codex request:', error);
-                const headers = new Headers({ 'Content-Type': 'application/json' });
-                applyCorsHeaders(headers, corsHeaders);
                 const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-                return new Response(
-                        JSON.stringify({ error: 'Invalid request body or processing error.', details: message }),
-                        { status: 400, headers },
+                return createErrorResponse(
+                        'Invalid request body or processing error.',
+                        400,
+                        corsHeaders,
+                        { details: message },
                 );
         }
 }
-
-export function extractCodexModelFromPath(pathname: string): string | null {
-        const match = pathname.match(CODEX_ROUTE_PATTERN);
-        return match?.[1] ?? null;
-}
-

@@ -16,12 +16,10 @@ import { handleOpenAIRequest, handleOpenAIStructuredRequest, handleOpenAITextReq
 import { handleGeminiRequest, handleGeminiStructuredRequest, handleGeminiTextRequest } from './handlers/gemini';
 import { handleCloudflareTextRequest, handleCloudflareStructuredRequest } from './handlers/cloudflare';
 import { supportsStructuredOutputs, getAvailableStructuredModels } from './handlers/model-info';
-import { handleCodexRequest } from './handlers/codex';
-
-const CODEX_ROUTE_REGEX = /^\/codex\/workers-ai\/([^/]+)$/;
+import { CODEX_ROUTE_PATTERN, handleCodexRequest } from './handlers/codex';
 
 export async function handleCodexRoute(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response | null> {
-    const match = new URL(request.url).pathname.match(CODEX_ROUTE_REGEX);
+    const match = new URL(request.url).pathname.match(CODEX_ROUTE_PATTERN);
     if (!match) {
         return null;
     }
