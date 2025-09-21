@@ -311,3 +311,35 @@ export async function handleCompletionsWithMemory(request: Request, env: Env, co
         });
     }
 }
+
+/**
+ * Provides a catalogue of notable API endpoints exposed by this worker. This is primarily
+ * used for documentation and tooling that dynamically renders available endpoints.
+ */
+export const REGISTERED_ENDPOINTS = [
+    {
+        endpoint: '/v1/models',
+        name: 'Model Catalogue',
+        provider: 'multi-provider'
+    },
+    {
+        endpoint: '/v1/completions',
+        name: 'Legacy Completions',
+        provider: 'openai-compatible'
+    },
+    {
+        endpoint: '/v1/completions/withmemory',
+        name: 'Completions with Memory',
+        provider: 'openai-compatible'
+    },
+    {
+        endpoint: '/test/apis',
+        name: 'Diagnostics',
+        provider: 'internal'
+    },
+    {
+        endpoint: '/codex/workers-ai/:model',
+        name: 'Codex Direct Handler',
+        provider: 'codex'
+    }
+];
