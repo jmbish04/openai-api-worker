@@ -8,7 +8,7 @@
  *              standard, structured (JSON), and text-only.
  */
 
-import type { ChatCompletionRequestBody } from './types';
+import type { ChatCompletionRequestBody, Env } from './types';
 import { debugLog, errorLog } from './utils';
 import { addMemoryContext, saveMemoryContext } from './memory';
 import { detectProvider, getModelType, mapModelName } from './models';
@@ -16,6 +16,19 @@ import { handleOpenAIRequest, handleOpenAIStructuredRequest, handleOpenAITextReq
 import { handleGeminiRequest, handleGeminiStructuredRequest, handleGeminiTextRequest } from './handlers/gemini';
 import { handleCloudflareTextRequest, handleCloudflareStructuredRequest } from './handlers/cloudflare';
 import { supportsStructuredOutputs, getAvailableStructuredModels } from './handlers/model-info';
+import { handleCodexRequest } from './handlers/codex';
+
+const CODEX_ROUTE_REGEX = /^\/codex\/workers-ai\/([^/]+)$/;
+
+export async function handleCodexRoute(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response | null> {
+    const match = new URL(request.url).pathname.match(CODEX_ROUTE_REGEX);
+    if (!match) {
+        return null;
+    }
+
+    const model = match[1];
+    return handleCodexRequest(request, env, model, corsHeaders);
+}
 
 /**
  * Validates if a model supports structured outputs and returns an error response if not.

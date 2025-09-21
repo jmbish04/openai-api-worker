@@ -158,5 +158,88 @@ export interface CloudflareAIModel {
  *   (e.g., 'meta', 'openai') and values are arrays of model details for that provider.
  */
 export interface CloudflareAIModelsResponse {
-	providers: Record<string, CloudflareAIModel[]>;
+        providers: Record<string, CloudflareAIModel[]>;
 }
+
+// --- Shared Message Types ---
+
+/**
+ * Represents a generic OpenAI-style chat message used across different handlers.
+ */
+export type OpenAIMessage = ChatMessage;
+
+/**
+ * Represents a single Gemini message part, which is primarily text-based in this worker.
+ */
+export interface GeminiMessagePart {
+        text: string;
+}
+
+/**
+ * Represents a single message entry in a Gemini request payload.
+ */
+export interface GeminiMessage {
+        role: 'user' | 'model';
+        parts: GeminiMessagePart[];
+}
+
+/**
+ * Represents the full request body when interacting with Gemini models.
+ */
+export interface GeminiRequest {
+        contents: GeminiMessage[];
+}
+
+// --- Codex CLI Request Types ---
+
+/**
+ * Represents a single message entry in the Codex CLI payload.
+ */
+export interface CodexMessage {
+        role: 'system' | 'user' | 'assistant';
+        content: string;
+}
+
+/**
+ * Describes the shape of a function tool in the Codex payload.
+ */
+export interface CodexToolFunction {
+        parameters: Record<string, unknown>;
+        name: string;
+        description: string;
+        strict?: boolean;
+}
+
+/**
+ * Represents a tool entry in the Codex payload.
+ */
+export interface CodexTool {
+        type: 'function';
+        function: CodexToolFunction;
+}
+
+/**
+ * Defines the top-level request body sent by the Codex CLI.
+ */
+export interface CodexRequestBody {
+        model: string;
+        messages: CodexMessage[];
+        stream?: boolean;
+        tools?: CodexTool[];
+        [key: string]: unknown;
+}
+
+// --- Environment Bindings ---
+
+declare global {
+        interface Env {
+                AI: any;
+                DB: D1Database;
+                KV: KVNamespace;
+                AUTH_KEY_SECRET: string;
+                CLOUDFLARE_ACCOUNT_ID: string;
+                // Add other environment variables here.
+        }
+}
+
+export type Env = globalThis.Env;

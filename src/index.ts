@@ -14,7 +14,7 @@
 
 import { authenticateRequest } from './auth';
 import { handleCompletions, handleCompletionsWithMemory, handleModelsRequest, handleTestAPIs } from './endpoints';
-import { handleChatCompletions, handleStructuredChatCompletions, handleTextChatCompletions } from './routing';
+import { handleChatCompletions, handleStructuredChatCompletions, handleTextChatCompletions, handleCodexRoute } from './routing';
 import { debugLog, errorLog, generateId } from './utils';
 
 export default {
@@ -96,10 +96,15 @@ export default {
 					headers: { 'Content-Type': 'application/json', ...corsHeaders },
 				});
 			}
-			debugLog(env, 'Authentication successful');
+                        debugLog(env, 'Authentication successful');
 
-			// Route API requests to their respective handlers.
-			switch (path) {
+                        const codexResponse = await handleCodexRoute(request, env, corsHeaders);
+                        if (codexResponse) {
+                                return codexResponse;
+                        }
+
+                        // Route API requests to their respective handlers.
+                        switch (path) {
 				case '/v1/chat/completions':
 					return handleChatCompletions(request, env, corsHeaders);
 				case '/v1/chat/completions/structured':
