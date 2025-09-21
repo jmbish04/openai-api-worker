@@ -1,4 +1,4 @@
-Post-Deployment Test Results - Fri Sep 19 11:01:28 PDT 2025
+Post-Deployment Test Results - Fri Sep 19 11:02:15 PDT 2025
 ========================================
 
 [0;34m🚀 Starting Post-Deployment Tests[0m
@@ -7,7 +7,7 @@ Post-Deployment Test Results - Fri Sep 19 11:01:28 PDT 2025
 [0;34mOutput file: post-deploy-test.txt[0m
 [0;34m=== 🏥 Health Check ===[0m
 [0;32m✅ Health check passed[0m
-Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T18:01:28.561Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
+Response: {"status":"healthy","service":"openai-api-worker","timestamp":"2025-09-19T18:02:16.238Z","version":"2.1.0","providers":{"cloudflare":true,"openai":true,"gemini":true}}
 [0;34m=== 📋 Models List ===[0m
 [0;32m✅ Models endpoint working[0m
 Found 173 models
@@ -17,7 +17,7 @@ Sample models:
   • gpt-3.5-turbo (openai)
 [0;34m=== 💬 Basic Chat Completions ===[0m
 [0;32m✅ Basic chat completions working[0m
-Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here and ready to assist you. How can I help you today?
+Response: Hello! I'm just a computer program, so I don't have feelings, but I'm here to help you. How can I assist you today?
 [0;34m=== 🧠 Memory-Enabled Completions ===[0m
 [0;32m✅ Memory-enabled completions working[0m
 Response: Hello Alice, nice to meet you. I will do my best to remember your name.
@@ -27,10 +27,10 @@ Response: I apologize, but I do not have access to personal information such as 
 [0;34m=== 📋 Structured Completions ===[0m
 [0;34mTesting OpenAI structured completions...[0m
 [0;32m✅ OpenAI structured completions working[0m
-Response: {"name":"Alice Johnson","age":28,"city":"Chicago"}
+Response: {"name":"Alice Johnson","age":28,"city":"Seattle"}
 [0;34mTesting Gemini structured completions...[0m
 [0;32m✅ Gemini structured completions working[0m
-Response: {"name": "Alice", "age": 30, "city": "New York"}
+Response: {"name":"Alice Wonderland","age":30,"city":"New York"}
 [0;34mTesting Cloudflare structured completions...[0m
 [0;32m✅ Cloudflare structured completions working[0m
 Response: {
@@ -40,7 +40,7 @@ Response: {
 }
 [0;34m=== 📝 Text-Only Completions ===[0m
 [0;32m✅ Text-only completions working[0m
-Response: Hello! How can I help you today?
+Response: Hello! How can I assist you today?
 [0;34m=== 🔄 Legacy Completions ===[0m
 [0;32m✅ Legacy completions working[0m
 Response: Hello! How can I assist you today?
@@ -110,7 +110,7 @@ Found Cloudflare models:
   • @cf/openchat/openchat-3.5-0106
 Testing Cloudflare model: @cf/openai/gpt-oss-120b
 [0;32m✅ Cloudflare model working: @cf/openai/gpt-oss-120b[0m
-Response: {"id":"resp_69e60eb434cb4f139be9a4af0714bf0c","created_at":1758304901,"instructions":null,"metadata":null,"model":"@cf/openai/gpt-oss-120b","object":"response","output":[{"id":"rs_1d334c93c62b4d28b806c1040b4aaf1e","content":[{"text":"We need to respond. This is a simple greeting. The system says we should respond as ChatGPT. Just say hello.","type":"reasoning_text"}],"summary":[],"type":"reasoning","encrypted_content":null,"status":null},{"id":"msg_11fa1617447e48ec86e51f0209132804","content":[{"annotations":[],"text":"Hello! How can I help you today?","type":"output_text","logprobs":null}],"role":"assistant","status":"completed","type":"message"}],"parallel_tool_calls":true,"temperature":1,"tool_choice":"auto","tools":[],"top_p":1,"background":false,"max_output_tokens":130998,"max_tool_calls":null,"previous_response_id":null,"prompt":null,"reasoning":null,"service_tier":"auto","status":"completed","text":null,"top_logprobs":0,"truncation":"disabled","usage":{"prompt_tokens":3,"completion_tokens":35,"total_tokens":38},"user":null}
+Response: {"id":"resp_e105e6d9081b45afb605e781bab1ea8d","created_at":1758304951,"instructions":null,"metadata":null,"model":"@cf/openai/gpt-oss-120b","object":"response","output":[{"id":"rs_d51110e491284c18a956ffefd1a39921","content":[{"text":"The user says \"Hello\". We need to respond friendly. No special instructions. Just greet back.","type":"reasoning_text"}],"summary":[],"type":"reasoning","encrypted_content":null,"status":null},{"id":"msg_8d823959436443809b85bb808fa60067","content":[{"annotations":[],"text":"Hello! How can I assist you today?","type":"output_text","logprobs":null}],"role":"assistant","status":"completed","type":"message"}],"parallel_tool_calls":true,"temperature":1,"tool_choice":"auto","tools":[],"top_p":1,"background":false,"max_output_tokens":130998,"max_tool_calls":null,"previous_response_id":null,"prompt":null,"reasoning":null,"service_tier":"auto","status":"completed","text":null,"top_logprobs":0,"truncation":"disabled","usage":{"prompt_tokens":3,"completion_tokens":31,"total_tokens":34},"user":null}
 [0;34m=== ⚡ Performance Test ===[0m
 [0;32m✅ Performance test passed[0m
 Response time: 1s
