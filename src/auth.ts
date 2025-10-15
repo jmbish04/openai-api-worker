@@ -28,7 +28,7 @@ export async function authenticateRequest(request: Request, env: Env): Promise<{
 	if (!authHeader.startsWith('Bearer ')) {
 		return { success: false, error: 'Invalid Authorization header format. Use: Bearer <token>' };
 	}
-        const token = authHeader.replace('Bearer ', '');
+	const token = authHeader.replace('Bearer ', '');
 
         if (!env.WORKER_API_KEY) {
                 errorLog('WORKER_API_KEY is not configured in the environment');
