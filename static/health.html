@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Service Health & Unit Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #2b5876 0%, #4e4376 100%);
+            color: #f7fafc;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .card {
+            background: rgba(15, 22, 36, 0.9);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+            margin-bottom: 24px;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #63b3ed;
+            color: #0f1724;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(99, 179, 237, 0.35);
+        }
+
+        button[disabled] {
+            cursor: wait;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(99, 179, 237, 0.1);
+            border: 1px solid rgba(99, 179, 237, 0.3);
+            border-radius: 999px;
+            padding: 6px 14px;
+            color: #bee3f8;
+            font-weight: 600;
+        }
+
+        .status-chip.fail {
+            background: rgba(252, 129, 129, 0.1);
+            border-color: rgba(252, 129, 129, 0.3);
+            color: #fed7d7;
+        }
+
+        .results {
+            margin-top: 24px;
+            display: grid;
+            gap: 16px;
+        }
+
+        .result-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .result-name {
+            font-weight: 600;
+            color: #edf2f7;
+        }
+
+        .result-error {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #fed7d7;
+        }
+
+        .summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+            color: rgba(237, 242, 247, 0.9);
+        }
+
+        a.back-link {
+            color: #90cdf4;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        a.back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Service Health &amp; Unit Tests</h1>
+            <p>Run the same endpoint unit tests used in CI directly from the browser. Results stream from the
+                real worker in real-time so you can verify every route, including structured Llama 4 completions.</p>
+        </header>
+
+        <div class="card">
+            <div class="actions">
+                <button id="run-tests">Run Unit Tests</button>
+                <span id="status-chip" class="status-chip">Idle</span>
+                <a class="back-link" href="/">← Back to documentation</a>
+            </div>
+            <div class="summary" id="summary"></div>
+            <div class="results" id="results"></div>
+        </div>
+    </div>
+
+    <script>
+        const runButton = document.getElementById('run-tests');
+        const resultsContainer = document.getElementById('results');
+        const statusChip = document.getElementById('status-chip');
+        const summaryContainer = document.getElementById('summary');
+
+        function setStatus(status, text) {
+            statusChip.classList.remove('fail');
+            if (status === 'fail') {
+                statusChip.classList.add('fail');
+            }
+            statusChip.textContent = text;
+        }
+
+        function renderSummary(report) {
+            summaryContainer.innerHTML = '';
+            const fragments = [
+                `Total: ${report.summary.total}`,
+                `Passed: ${report.summary.passed}`,
+                `Failed: ${report.summary.failed}`,
+                `Duration: ${Math.round(report.durationMs)} ms`
+            ];
+            fragments.forEach(text => {
+                const span = document.createElement('span');
+                span.textContent = text;
+                summaryContainer.appendChild(span);
+            });
+        }
+
+        function renderResults(tests) {
+            resultsContainer.innerHTML = '';
+            tests.forEach(test => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+
+                const header = document.createElement('div');
+                header.className = 'result-header';
+
+                const name = document.createElement('span');
+                name.className = 'result-name';
+                name.textContent = test.name;
+
+                const badge = document.createElement('span');
+                badge.className = `status-chip ${test.status === 'fail' ? 'fail' : ''}`;
+                badge.textContent = `${test.status.toUpperCase()} • ${Math.round(test.durationMs)} ms`;
+
+                header.appendChild(name);
+                header.appendChild(badge);
+                item.appendChild(header);
+
+                if (test.error) {
+                    const error = document.createElement('div');
+                    error.className = 'result-error';
+                    error.textContent = test.error;
+                    item.appendChild(error);
+                }
+
+                resultsContainer.appendChild(item);
+            });
+        }
+
+        async function runTests() {
+            runButton.disabled = true;
+            setStatus('running', 'Running…');
+            summaryContainer.innerHTML = '';
+            resultsContainer.innerHTML = '';
+
+            try {
+                const response = await fetch('/health');
+                const report = await response.json();
+
+                setStatus(report.status, report.status === 'pass' ? 'All tests passed' : 'Tests failed');
+                renderSummary(report);
+                renderResults(report.tests);
+            } catch (error) {
+                setStatus('fail', 'Unable to fetch results');
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'result-error';
+                    errorDiv.textContent = error instanceof Error ? error.message : String(error);
+                    item.appendChild(errorDiv);
+                resultsContainer.appendChild(item);
+            } finally {
+                runButton.disabled = false;
+            }
+        }
+
+        runButton.addEventListener('click', runTests);
+    </script>
+</body>
+
+</html>
