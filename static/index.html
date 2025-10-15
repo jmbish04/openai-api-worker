@@ -101,6 +101,12 @@
             border-radius: 8px 8px 0 0;
         }
 
+        .nav a.nav-item {
+            text-decoration: none;
+            color: inherit;
+            display: inline-block;
+        }
+
         .nav-item:hover {
             background: #f5f5f5;
         }
@@ -142,6 +148,38 @@
             font-size: 0.9rem;
             line-height: 1.4;
             position: relative;
+        }
+
+        .tabbed-example {
+            margin: 20px 0 30px 0;
+        }
+
+        .tab-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            background: rgba(102, 126, 234, 0.12);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #444;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .tab-button.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.35);
         }
 
         .copy-btn {
@@ -559,6 +597,7 @@
                 <div class="nav-item" onclick="showSection('endpoints')">🔗 Endpoints</div>
                 <div class="nav-item" onclick="showSection('examples')">💡 Examples</div>
                 <div class="nav-item" onclick="showSection('auth')">🔐 Authentication</div>
+                <a class="nav-item" href="/downloads.html">⬇️ Download Modules</a>
             </div>
 
             <div id="overview" class="section active">
@@ -596,8 +635,9 @@
                 <p>
                     • <a href="/openapi.json" target="_blank">OpenAPI Specification</a><br>
                     • <a href="/health" target="_blank">Health Check</a><br>
-                    • <a href="https://docs.cloudflare.com/workers/">Cloudflare Workers Docs</a>
-                </p>
+                    • <a href="https://docs.cloudflare.com/workers/">Cloudflare Workers Docs</a><br>
+                    • <a href="https://developers.cloudflare.com/workers-ai/models/llama-4-scout-17b-16e-instruct/" target="_blank" rel="noopener noreferrer">Llama 4 Scout Model Docs</a>
+            </p>
             </div>
 
             <div id="tester" class="section">
@@ -829,6 +869,22 @@
             <div id="examples" class="section">
                 <h2>💡 Code Examples</h2>
 
+                <h3>Structured Responses with Llama 4</h3>
+                <p>Use <code>@cf/meta/llama-4-scout-17b-16e-instruct</code> for JSON-safe answers. Learn more in the <a href="https://developers.cloudflare.com/workers-ai/models/llama-4-scout-17b-16e-instruct/" target="_blank" rel="noopener noreferrer">official Workers AI documentation</a>.</p>
+                <div class="tabbed-example structured-example" data-default-lang="curl">
+                    <div class="tab-buttons">
+                        <button class="tab-button structured-tab active" data-lang="curl">curl</button>
+                        <button class="tab-button structured-tab" data-lang="python">python</button>
+                        <button class="tab-button structured-tab" data-lang="typescript">typescript</button>
+                        <button class="tab-button structured-tab" data-lang="javascript">javascript</button>
+                        <button class="tab-button structured-tab" data-lang="rest">rest api</button>
+                    </div>
+                    <div class="code-block">
+                        <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
+                        <pre><code id="structured-example-code">Select a language to view an example.</code></pre>
+                    </div>
+                </div>
+
                 <h3>JavaScript / Node.js</h3>
                 <div class="code-block">
                     <button class="copy-btn" onclick="copyToClipboard(this)">Copy</button>
@@ -929,6 +985,233 @@ print(response.json()['choices'][0]['message']['content'])
     </div>
 
     <script>
+        const structuredResponseSnippets = {
+            curl: `curl -X POST [WORKER_URL]/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer $WORKER_API_KEY" \\
+  -d '{
+    "model": "@cf/meta/llama-4-scout-17b-16e-instruct",
+    "messages": [
+      {"role": "system", "content": "You are a structured data generator."},
+      {"role": "user", "content": "Produce a travel brief for Lisbon."}
+    ],
+    "response_format": {
+      "type": "json_schema",
+      "json_schema": {
+        "name": "travel_guide",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "city": {"type": "string"},
+            "summary": {"type": "string"},
+            "highlights": {
+              "type": "array",
+              "items": {"type": "string"},
+              "minItems": 2
+            }
+          },
+          "required": ["city", "summary", "highlights"],
+          "additionalProperties": false
+        }
+      }
+    }
+  }'`,
+            python: `import json
+import os
+import requests
+
+worker_url = "[WORKER_URL]/v1/chat/completions"
+api_key = os.environ["WORKER_API_KEY"]
+
+payload = {
+    "model": "@cf/meta/llama-4-scout-17b-16e-instruct",
+    "messages": [
+        {"role": "system", "content": "Return JSON only."},
+        {"role": "user", "content": "Summarize Lisbon for a first-time visitor."}
+    ],
+    "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "travel_plan",
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "city": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "must_do": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "minItems": 3
+                    }
+                },
+                "required": ["city", "summary", "must_do"],
+                "additionalProperties": False
+            }
+        }
+    }
+}
+
+response = requests.post(
+    worker_url,
+    headers={
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    },
+    json=payload,
+    timeout=60,
+)
+response.raise_for_status()
+print(json.dumps(response.json()["choices"][0]["message"].get("parsed"), indent=2))`,
+            typescript: `import type { ChatCompletion } from "openai";
+
+const workerUrl = "[WORKER_URL]";
+const apiKey = process.env.WORKER_API_KEY ?? "";
+
+async function structuredExample(): Promise<void> {
+  const endpoint = workerUrl + "/v1/chat/completions";
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "@cf/meta/llama-4-scout-17b-16e-instruct",
+      messages: [
+        { role: "system", content: "Respond using JSON only." },
+        { role: "user", content: "Create a Lisbon itinerary with three highlights." },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "itinerary",
+          schema: {
+            type: "object",
+            properties: {
+              city: { type: "string" },
+              highlights: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 3,
+              },
+              tip: { type: "string" },
+            },
+            required: ["city", "highlights", "tip"],
+          },
+        },
+      },
+    }),
+  });
+
+  const body = (await response.json()) as ChatCompletion;
+  console.log(body.choices[0].message?.parsed);
+}
+
+structuredExample().catch(console.error);`,
+            javascript: `const workerUrl = "[WORKER_URL]";
+const apiKey = process.env.WORKER_API_KEY || "";
+
+async function runStructuredExample() {
+  const res = await fetch(workerUrl + "/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "@cf/meta/llama-4-scout-17b-16e-instruct",
+      messages: [
+        { role: "system", content: "Return JSON." },
+        { role: "user", content: "Share two food recommendations for Lisbon." },
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "food_recs",
+          schema: {
+            type: "object",
+            properties: {
+              city: { type: "string" },
+              dishes: {
+                type: "array",
+                items: { type: "string" },
+                minItems: 2,
+              },
+            },
+            required: ["city", "dishes"],
+          },
+        },
+      },
+    }),
+  });
+
+  const data = await res.json();
+  console.log(data.choices[0].message?.parsed);
+}
+
+runStructuredExample().catch(console.error);`,
+            rest: `POST /v1/chat/completions HTTP/1.1
+Host: [WORKER_URL_HOST]
+Authorization: Bearer WORKER_API_KEY
+Content-Type: application/json
+
+{
+  "model": "@cf/meta/llama-4-scout-17b-16e-instruct",
+  "messages": [
+    { "role": "system", "content": "Return valid JSON." },
+    { "role": "user", "content": "Outline Lisbon highlights." }
+  ],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "lisbon_highlights",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "city": { "type": "string" },
+          "summary": { "type": "string" },
+          "spots": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 2
+          }
+        },
+        "required": ["city", "summary", "spots"]
+      }
+    }
+  }
+}`,
+        };
+
+        function initializeStructuredExampleTabs(origin) {
+            const container = document.querySelector('.structured-example');
+            if (!container) return;
+            const codeEl = container.querySelector('#structured-example-code');
+            const buttons = container.querySelectorAll('.structured-tab');
+            const resolvedSnippets = {};
+
+            Object.keys(structuredResponseSnippets).forEach(key => {
+                const snippet = structuredResponseSnippets[key]
+                    .replace(/\[WORKER_URL_HOST\]/g, origin.replace(/^https?:\/\//, ''))
+                    .replace(/\[WORKER_URL\]/g, origin);
+                resolvedSnippets[key] = snippet;
+            });
+
+            function setActive(lang) {
+                if (!resolvedSnippets[lang] || !codeEl) return;
+                buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.lang === lang));
+                codeEl.textContent = resolvedSnippets[lang];
+                container.setAttribute('data-active-lang', lang);
+            }
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => setActive(btn.dataset.lang));
+            });
+
+            const defaultLang = container.getAttribute('data-default-lang') || 'curl';
+            setActive(defaultLang);
+        }
+
         let currentEndpoint = null;
         let chatHistory = [];
         let availableModels = []; // full /v1/models response
@@ -983,6 +1266,8 @@ print(response.json()['choices'][0]['message']['content'])
                 document.querySelectorAll('.code-block code').forEach(codeEl => {
                     codeEl.textContent = codeEl.textContent.replace(/\[WORKER_URL\]/g, currentOrigin);
                 });
+
+                initializeStructuredExampleTabs(currentOrigin);
 
                 // Wire initial UI events
                 document.getElementById('ai-service').addEventListener('change', onAIServiceChange);
