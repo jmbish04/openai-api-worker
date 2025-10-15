@@ -114,3 +114,20 @@ test('health endpoint returns report payload', async () => {
         assert(Array.isArray(payload.tests));
         assert(payload.summary.total >= payload.summary.passed);
 });
+
+test('static asset errors preserve original status code', async () => {
+        const env = createStubEnv();
+        env.ASSETS = {
+                async fetch() {
+                        return new Response('<!DOCTYPE html><title>Not Found</title>', {
+                                status: 404,
+                                headers: { 'Content-Type': 'text/html' },
+                        });
+                },
+        } as Env['ASSETS'];
+
+        const response = await handleRequest(new Request(`${BASE_URL}/openapi.json`), env);
+        assert.equal(response.status, 404);
+        const body = await response.text();
+        assert.ok(body.includes('Not Found'));
+});

@@ -54,10 +54,27 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
                 if (PUBLIC_ROUTES[path]) {
                         debugLog(env, `Serving static asset: ${PUBLIC_ROUTES[path]}`);
                         try {
-                                const asset = await env.ASSETS.fetch(new URL(request.url).origin + PUBLIC_ROUTES[path]);
-                                const contentType = path.endsWith('.json') ? 'application/json' : 'text/html';
-                                return new Response(asset.body, {
-                                        headers: { 'Content-Type': contentType, ...CORS_HEADERS },
+                                const assetResponse = await env.ASSETS.fetch(new URL(request.url).origin + PUBLIC_ROUTES[path]);
+                                const headers = new Headers(assetResponse.headers);
+
+                                // Ensure consistent CORS headers for all static responses.
+                                for (const [key, value] of Object.entries(CORS_HEADERS)) {
+                                        headers.set(key, value);
+                                }
+
+                                // Override the content type for HTML/JSON assets if not already set on successful responses.
+                                if (assetResponse.ok) {
+                                        if (path.endsWith('.json')) {
+                                                headers.set('Content-Type', 'application/json');
+                                        } else if (!headers.has('Content-Type')) {
+                                                headers.set('Content-Type', 'text/html');
+                                        }
+                                }
+
+                                return new Response(assetResponse.body, {
+                                        status: assetResponse.status,
+                                        statusText: assetResponse.statusText,
+                                        headers,
                                 });
                         } catch (error) {
                                 errorLog(`Error serving static asset: ${path}`, error);
