@@ -43,12 +43,14 @@ const CORS_HEADERS: Record<string, string> = {
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
         const url = new URL(request.url);
         const path = url.pathname;
+        const requestId = request.headers.get('CF-Ray') ?? generateId(16);
+        const corsHeaders = { ...CORS_HEADERS, 'X-Request-Id': requestId };
 
         debugLog(env, `Incoming request: ${request.method} ${path}`);
 
         if (request.method === 'OPTIONS') {
                 debugLog(env, 'Handling CORS preflight request');
-                return new Response(null, { headers: CORS_HEADERS });
+                return new Response(null, { headers: corsHeaders });
         }
 
         try {
@@ -59,7 +61,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
                                 const headers = new Headers(assetResponse.headers);
 
                                 // Ensure consistent CORS headers for all static responses.
-                                for (const [key, value] of Object.entries(CORS_HEADERS)) {
+                                for (const [key, value] of Object.entries(corsHeaders)) {
                                         headers.set(key, value);
                                 }
 
@@ -79,7 +81,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
                                 });
                         } catch (error) {
                                 errorLog(`Error serving static asset: ${path}`, error);
-                                return new Response(`Not Found: ${path}`, { status: 404, headers: CORS_HEADERS });
+                                return new Response(`Not Found: ${path}`, { status: 404, headers: corsHeaders });
                         }
                 }
 
@@ -94,55 +96,76 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
                                 },
                         );
 
-                        return new Response(JSON.stringify({
-                                status: report.status,
-                                service: 'openai-api-worker',
-                                version: '2.1.0',
-                                timestamp: new Date().toISOString(),
-                                durationMs: report.durationMs,
-                                summary: report.summary,
-                                tests: report.tests,
-                        }), { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+                        return new Response(
+                                JSON.stringify({
+                                        status: report.status,
+                                        service: 'openai-api-worker',
+                                        version: '2.1.0',
+                                        timestamp: new Date().toISOString(),
+                                        durationMs: report.durationMs,
+                                        summary: report.summary,
+                                        tests: report.tests,
+                                }),
+                                { headers: { 'Content-Type': 'application/json', ...corsHeaders } },
+                        );
                 }
 
                 const authResult = await authenticateRequest(request, env);
                 if (!authResult.success) {
                         errorLog(`Authentication failed: ${authResult.error}`);
-                        return new Response(JSON.stringify({ error: { message: authResult.error, type: 'invalid_request_error' } }), {
-                                status: 401,
-                                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-                        });
+                        return new Response(
+                                JSON.stringify({ error: { message: authResult.error, type: 'invalid_request_error' } }),
+                                {
+                                        status: 401,
+                                        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                                },
+                        );
                 }
                 debugLog(env, 'Authentication successful');
 
-                        const requestQueue = getRequestQueue(env);
+                const requestQueue = getRequestQueue(env);
 
-                        const codexResponse = await handleCodexRoute(request, env, corsHeaders);
-                        if (codexResponse) {
-                                return codexResponse;
-                        }
+                const codexResponse = await handleCodexRoute(request, env, corsHeaders);
+                if (codexResponse) {
+                        return codexResponse;
+                }
 
-                        // Route API requests to their respective handlers.
-                        switch (path) {
-                                case '/v1/chat/completions':
-                                        return requestQueue.enqueue(() => handleChatCompletions(request, env, corsHeaders));
-                                case '/v1/chat/completions/structured':
-                                        return requestQueue.enqueue(() => handleStructuredChatCompletions(request, env, corsHeaders));
-                                case '/v1/chat/completions/text':
-                                        return requestQueue.enqueue(() => handleTextChatCompletions(request, env, corsHeaders));
-                                case '/v1/models':
-                                        return requestQueue.enqueue(() => handleModelsRequest(request, env, corsHeaders));
-                                case '/v1/completions':
-                                        return requestQueue.enqueue(() => handleCompletions(request, env, corsHeaders));
-                                case '/v1/completions/withmemory':
-                                        return requestQueue.enqueue(() => handleCompletionsWithMemory(request, env, corsHeaders));
-                                case '/test/apis':
-                                        return requestQueue.enqueue(() => handleTestAPIs(request, env, corsHeaders));
-                                default:
-                                        return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
+                // Route API requests to their respective handlers.
+                switch (path) {
+                        case '/v1/chat/completions':
+                                return requestQueue.enqueue(() => handleChatCompletions(request, env, corsHeaders));
+                        case '/v1/chat/completions/structured':
+                                return requestQueue.enqueue(() => handleStructuredChatCompletions(request, env, corsHeaders));
+                        case '/v1/chat/completions/text':
+                                return requestQueue.enqueue(() => handleTextChatCompletions(request, env, corsHeaders));
+                        case '/v1/models':
+                                return requestQueue.enqueue(() => handleModelsRequest(request, env, corsHeaders));
+                        case '/v1/completions':
+                                return requestQueue.enqueue(() => handleCompletions(request, env, corsHeaders));
+                        case '/v1/completions/withmemory':
+                                return requestQueue.enqueue(() => handleCompletionsWithMemory(request, env, corsHeaders));
+                        case '/test/apis':
+                                return requestQueue.enqueue(() => handleTestAPIs(request, env, corsHeaders));
+                        default:
+                                return new Response(
+                                        JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }),
+                                        {
                                                 status: 404,
                                                 headers: { 'Content-Type': 'application/json', ...corsHeaders },
-                                        });
-			}
+                                        },
+                                );
+                }
+        } catch (error) {
+                errorLog('Unhandled error in handleRequest', error);
+                const failureHeaders = { ...corsHeaders };
+                return new Response(
+                        JSON.stringify({ error: { message: 'Internal Server Error', type: 'server_error' } }),
+                        {
+                                status: 500,
+                                headers: { 'Content-Type': 'application/json', ...failureHeaders },
+                        },
+                );
+        }
+}
 
 export default { fetch: handleRequest };
