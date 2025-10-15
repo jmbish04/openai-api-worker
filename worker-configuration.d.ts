@@ -8,10 +8,11 @@ declare namespace Cloudflare {
 		BACKUP_MODEL: "@cf/openai/gpt-oss-120b";
 		WORKER_API_KEY: string;
 		CORE_WORKER_API_KEY: string;
-		DEBUG_LOGGING: string;
-		GEMINI_API_KEY: string;
-		OPENAI_API_KEY: string;
-		CORE_API: Fetcher /* core-api */;
+                DEBUG_LOGGING: string;
+                GEMINI_API_KEY: string;
+                OPENAI_API_KEY: string;
+                REQUEST_CONCURRENCY?: string;
+                CORE_API: Fetcher /* core-api */;
 		AI: Ai;
 		ASSETS: Fetcher;
 	}

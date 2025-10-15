@@ -14,7 +14,7 @@
 
 import OpenAI from 'openai';
 import { saveMemoryContext } from '../memory';
-import { debugLog, errorLog, generateId } from '../utils';
+import { debugLog, errorLog, generateId, logAIResponse } from '../utils';
 
 // Minimal allowlist for json_schema-capable SKUs (expand if you confirm others)
 const JSON_SCHEMA_MODELS = [
@@ -128,6 +128,10 @@ export async function handleOpenAIRequest(params: any, env: Env, corsHeaders: Re
 
         const completion = await openai.chat.completions.create(apiParams);
 
+        if (params.stream) {
+            debugLog(env, 'OpenAI streaming response started', { model: modelId });
+        }
+
         // --- Normalize response when we used tools+strict fallback ---
         if (!supportsJsonSchema(modelId) && apiParams.tool_choice?.type === 'function') {
             const msg = (completion as any).choices?.[0]?.message;
@@ -149,6 +153,7 @@ export async function handleOpenAIRequest(params: any, env: Env, corsHeaders: Re
                 } else {
                     const responseText = cloned.choices[0]?.message?.content || '';
                     await saveMemoryContext(params.messages, responseText, params.memory_keyword, env);
+                    logAIResponse(env, 'OpenAI', cloned, { model: modelId, normalization: 'tools+strict' });
                     return new Response(JSON.stringify(cloned), {
                         headers: { 'Content-Type': 'application/json', ...corsHeaders }
                     });
@@ -164,6 +169,7 @@ export async function handleOpenAIRequest(params: any, env: Env, corsHeaders: Re
         } else {
             const responseText = (completion as any).choices[0]?.message?.content || '';
             await saveMemoryContext(params.messages, responseText, params.memory_keyword, env);
+            logAIResponse(env, 'OpenAI', completion, { model: modelId });
             return new Response(JSON.stringify(completion), {
                 headers: { 'Content-Type': 'application/json', ...corsHeaders }
             });

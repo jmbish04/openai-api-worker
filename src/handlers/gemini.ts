@@ -11,7 +11,7 @@ import { GoogleGenAI } from "@google/genai";
 import type { ChatCompletion } from 'openai/resources/chat/completions';
 import { saveMemoryContext } from '../memory';
 import type { ChatMessage } from '../types';
-import { debugLog, errorLog, generateId } from '../utils';
+import { debugLog, errorLog, generateId, logAIResponse, truncateForLog } from '../utils';
 import { convertOpenAISchemaToGemini } from '../models';
 
 /**
@@ -79,6 +79,7 @@ export async function handleGeminiRequest(params: any, env: Env, corsHeaders: Re
                     for await (const chunk of streamResult) {
                         const chunkText = chunk.text;
                         if (chunkText) {
+                            debugLog(env, 'Gemini stream chunk', { preview: truncateForLog(chunkText) });
                             const delta = {
                                 id: `chatcmpl-${generateId()}`,
                                 object: 'chat.completion.chunk',
@@ -86,9 +87,7 @@ export async function handleGeminiRequest(params: any, env: Env, corsHeaders: Re
                                 model: params.model,
                                 choices: [{ index: 0, delta: { content: chunkText }, finish_reason: null }]
                             };
-                            await writer.write(encoder.encode(`data: ${JSON.stringify(delta)}
-
-`));
+                            await writer.write(encoder.encode(`data: ${JSON.stringify(delta)}\n\n`));
                         }
                     }
 
@@ -131,6 +130,7 @@ export async function handleGeminiRequest(params: any, env: Env, corsHeaders: Re
                 choices: [{ index: 0, message: { role: 'assistant', content: text || null, refusal: null }, finish_reason: 'stop', logprobs: null }],
                 usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } // Usage data not provided by Gemini
             };
+            logAIResponse(env, 'Gemini', openaiResponse, { model: params.model });
             return new Response(JSON.stringify(openaiResponse), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
         }
     } catch (error) {

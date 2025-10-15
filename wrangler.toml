@@ -30,6 +30,7 @@ service = "core-api"
 # Default models configuration
 DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 BACKUP_MODEL = "@cf/openai/gpt-oss-120b"
+REQUEST_CONCURRENCY = "6"
 
 # Environment-specific variables (set these using wrangler secret put)
 # WORKER_API_KEY = "your-secure-worker-api-key"

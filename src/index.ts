@@ -16,6 +16,7 @@ import { authenticateRequest } from './auth';
 import { handleCompletions, handleCompletionsWithMemory, handleModelsRequest, handleTestAPIs } from './endpoints';
 import { handleChatCompletions, handleStructuredChatCompletions, handleTextChatCompletions, handleCodexRoute } from './routing';
 import { debugLog, errorLog, generateId } from './utils';
+import { getRequestQueue } from './request-queue';
 
 export default {
 	/**
@@ -98,6 +99,8 @@ export default {
 			}
                         debugLog(env, 'Authentication successful');
 
+                        const requestQueue = getRequestQueue(env);
+
                         const codexResponse = await handleCodexRoute(request, env, corsHeaders);
                         if (codexResponse) {
                                 return codexResponse;
@@ -105,25 +108,25 @@ export default {
 
                         // Route API requests to their respective handlers.
                         switch (path) {
-				case '/v1/chat/completions':
-					return handleChatCompletions(request, env, corsHeaders);
-				case '/v1/chat/completions/structured':
-					return handleStructuredChatCompletions(request, env, corsHeaders);
-				case '/v1/chat/completions/text':
-					return handleTextChatCompletions(request, env, corsHeaders);
-				case '/v1/models':
-					return handleModelsRequest(request, env, corsHeaders);
-				case '/v1/completions':
-					return handleCompletions(request, env, corsHeaders);
-				case '/v1/completions/withmemory':
-					return handleCompletionsWithMemory(request, env, corsHeaders);
-				case '/test/apis':
-					return handleTestAPIs(request, env, corsHeaders);
-				default:
-					return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
-						status: 404,
-						headers: { 'Content-Type': 'application/json', ...corsHeaders },
-					});
+                                case '/v1/chat/completions':
+                                        return requestQueue.enqueue(() => handleChatCompletions(request, env, corsHeaders));
+                                case '/v1/chat/completions/structured':
+                                        return requestQueue.enqueue(() => handleStructuredChatCompletions(request, env, corsHeaders));
+                                case '/v1/chat/completions/text':
+                                        return requestQueue.enqueue(() => handleTextChatCompletions(request, env, corsHeaders));
+                                case '/v1/models':
+                                        return requestQueue.enqueue(() => handleModelsRequest(request, env, corsHeaders));
+                                case '/v1/completions':
+                                        return requestQueue.enqueue(() => handleCompletions(request, env, corsHeaders));
+                                case '/v1/completions/withmemory':
+                                        return requestQueue.enqueue(() => handleCompletionsWithMemory(request, env, corsHeaders));
+                                case '/test/apis':
+                                        return requestQueue.enqueue(() => handleTestAPIs(request, env, corsHeaders));
+                                default:
+                                        return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
+                                                status: 404,
+                                                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                                        });
 			}
 
 		} catch (error) {
