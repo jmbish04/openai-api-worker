@@ -14,133 +14,130 @@
 
 import { authenticateRequest } from './auth';
 import { handleCompletions, handleCompletionsWithMemory, handleModelsRequest, handleTestAPIs } from './endpoints';
+import { runEndpointHealthChecks } from './health';
 import { handleChatCompletions, handleStructuredChatCompletions, handleTextChatCompletions, handleCodexRoute } from './routing';
 import { debugLog, errorLog, generateId } from './utils';
 
-export default {
-	/**
-	 * The main fetch handler for the Cloudflare Worker.
-	 * This function is executed for every incoming HTTP request.
-	 *
-	 * @param {Request} request - The incoming request object.
-	 * @param {Env} env - The environment object containing bindings and variables.
-	 * @returns {Promise<Response>} A promise that resolves to the response to be sent to the client.
-	 */
-	async fetch(request: Request, env: Env): Promise<Response> {
-		const url = new URL(request.url);
-		const path = url.pathname;
-
-		debugLog(env, `Incoming request: ${request.method} ${path}`);
-
-		// Define CORS headers for preflight (OPTIONS) and actual requests.
-		const corsHeaders: Record<string, string> = {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-		};
-
-		if (request.method === 'OPTIONS') {
-			debugLog(env, 'Handling CORS preflight request');
-			return new Response(null, { headers: corsHeaders });
-		}
-
-		try {
-            // A map of public routes that do not require authentication.
-            const publicRoutes: Record<string, string> = {
-                '/': '/index.html',
-                '/index.html': '/index.html',
-                '/openapi.json': '/openapi.json',
-                '/test-dropdowns.html': '/test-dropdowns.html',
-                '/debug-test.html': '/debug-test.html',
-                '/quick-test.html': '/quick-test.html',
-                '/cloudflare_ai_models.json': '/cloudflare_ai_models.json',
-            };
-
-            if (publicRoutes[path]) {
-                debugLog(env, `Serving static asset: ${publicRoutes[path]}`);
-                try {
-                    // Use the ASSETS binding to fetch static files.
-                    const asset = await env.ASSETS.fetch(new URL(request.url).origin + publicRoutes[path]);
-                    const contentType = path.endsWith('.json') ? 'application/json' : 'text/html';
-                    return new Response(asset.body, {
-                        headers: { 'Content-Type': contentType, ...corsHeaders },
-                    });
-                } catch (error) {
-                    errorLog(`Error serving static asset: ${path}`, error);
-                    return new Response(`Not Found: ${path}`, { status: 404, headers: corsHeaders });
-                }
-            }
-
-			// Health check endpoint for monitoring.
-			if (path === '/health') {
-				debugLog(env, 'Health check requested');
-				return new Response(JSON.stringify({
-					status: 'healthy',
-					service: 'openai-api-worker',
-					timestamp: new Date().toISOString(),
-					version: '2.1.0',
-					providers: {
-						cloudflare: true,
-						openai: !!env.OPENAI_API_KEY,
-						gemini: !!env.GEMINI_API_KEY
-					}
-				}), { headers: { 'Content-Type': 'application/json', ...corsHeaders } });
-			}
-
-			// Authenticate all other API requests.
-			const authResult = await authenticateRequest(request, env);
-			if (!authResult.success) {
-				errorLog(`Authentication failed: ${authResult.error}`);
-				return new Response(JSON.stringify({ error: { message: authResult.error, type: 'invalid_request_error' } }), {
-					status: 401,
-					headers: { 'Content-Type': 'application/json', ...corsHeaders },
-				});
-			}
-                        debugLog(env, 'Authentication successful');
-
-                        const codexResponse = await handleCodexRoute(request, env, corsHeaders);
-                        if (codexResponse) {
-                                return codexResponse;
-                        }
-
-                        // Route API requests to their respective handlers.
-                        switch (path) {
-				case '/v1/chat/completions':
-					return handleChatCompletions(request, env, corsHeaders);
-				case '/v1/chat/completions/structured':
-					return handleStructuredChatCompletions(request, env, corsHeaders);
-				case '/v1/chat/completions/text':
-					return handleTextChatCompletions(request, env, corsHeaders);
-				case '/v1/models':
-					return handleModelsRequest(request, env, corsHeaders);
-				case '/v1/completions':
-					return handleCompletions(request, env, corsHeaders);
-				case '/v1/completions/withmemory':
-					return handleCompletionsWithMemory(request, env, corsHeaders);
-				case '/test/apis':
-					return handleTestAPIs(request, env, corsHeaders);
-				default:
-					return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
-						status: 404,
-						headers: { 'Content-Type': 'application/json', ...corsHeaders },
-					});
-			}
-
-		} catch (error) {
-			// Global error handler for any unhandled exceptions.
-			errorLog('Unhandled worker error', error);
-			const errorResponse = {
-				error: {
-					message: 'Internal Server Error',
-					type: 'server_error',
-					details: error instanceof Error ? error.message : 'Unknown error',
-					request_id: generateId()
-				}
-			};
-			return new Response(JSON.stringify(errorResponse), {
-				status: 500,
-				headers: { 'Content-Type': 'application/json', ...corsHeaders },
-			});
-		}
-	},
+const PUBLIC_ROUTES: Record<string, string> = {
+        '/': '/index.html',
+        '/index.html': '/index.html',
+        '/openapi.json': '/openapi.json',
+        '/health.html': '/health.html',
+        '/test-dropdowns.html': '/test-dropdowns.html',
+        '/debug-test.html': '/debug-test.html',
+        '/quick-test.html': '/quick-test.html',
+        '/cloudflare_ai_models.json': '/cloudflare_ai_models.json',
 };
+
+const CORS_HEADERS: Record<string, string> = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+/**
+ * Shared handler for all incoming requests.
+ * Exported separately to make it easy to reuse in unit tests and health checks.
+ */
+export async function handleRequest(request: Request, env: Env): Promise<Response> {
+        const url = new URL(request.url);
+        const path = url.pathname;
+
+        debugLog(env, `Incoming request: ${request.method} ${path}`);
+
+        if (request.method === 'OPTIONS') {
+                debugLog(env, 'Handling CORS preflight request');
+                return new Response(null, { headers: CORS_HEADERS });
+        }
+
+        try {
+                if (PUBLIC_ROUTES[path]) {
+                        debugLog(env, `Serving static asset: ${PUBLIC_ROUTES[path]}`);
+                        try {
+                                const asset = await env.ASSETS.fetch(new URL(request.url).origin + PUBLIC_ROUTES[path]);
+                                const contentType = path.endsWith('.json') ? 'application/json' : 'text/html';
+                                return new Response(asset.body, {
+                                        headers: { 'Content-Type': contentType, ...CORS_HEADERS },
+                                });
+                        } catch (error) {
+                                errorLog(`Error serving static asset: ${path}`, error);
+                                return new Response(`Not Found: ${path}`, { status: 404, headers: CORS_HEADERS });
+                        }
+                }
+
+                if (path === '/health') {
+                        debugLog(env, 'Health check requested');
+                        const report = await runEndpointHealthChecks(
+                                (req: Request) => handleRequest(req, env),
+                                env,
+                                {
+                                        baseUrl: url.origin,
+                                        includeHealthEndpointTest: false,
+                                },
+                        );
+
+                        return new Response(JSON.stringify({
+                                status: report.status,
+                                service: 'openai-api-worker',
+                                version: '2.1.0',
+                                timestamp: new Date().toISOString(),
+                                durationMs: report.durationMs,
+                                summary: report.summary,
+                                tests: report.tests,
+                        }), { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } });
+                }
+
+                const authResult = await authenticateRequest(request, env);
+                if (!authResult.success) {
+                        errorLog(`Authentication failed: ${authResult.error}`);
+                        return new Response(JSON.stringify({ error: { message: authResult.error, type: 'invalid_request_error' } }), {
+                                status: 401,
+                                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                        });
+                }
+                debugLog(env, 'Authentication successful');
+
+                const codexResponse = await handleCodexRoute(request, env, CORS_HEADERS);
+                if (codexResponse) {
+                        return codexResponse;
+                }
+
+                switch (path) {
+                        case '/v1/chat/completions':
+                                return handleChatCompletions(request, env, CORS_HEADERS);
+                        case '/v1/chat/completions/structured':
+                                return handleStructuredChatCompletions(request, env, CORS_HEADERS);
+                        case '/v1/chat/completions/text':
+                                return handleTextChatCompletions(request, env, CORS_HEADERS);
+                        case '/v1/models':
+                                return handleModelsRequest(request, env, CORS_HEADERS);
+                        case '/v1/completions':
+                                return handleCompletions(request, env, CORS_HEADERS);
+                        case '/v1/completions/withmemory':
+                                return handleCompletionsWithMemory(request, env, CORS_HEADERS);
+                        case '/test/apis':
+                                return handleTestAPIs(request, env, CORS_HEADERS);
+                        default:
+                                return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
+                                        status: 404,
+                                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                                });
+                }
+        } catch (error) {
+                errorLog('Unhandled worker error', error);
+                const errorResponse = {
+                        error: {
+                                message: 'Internal Server Error',
+                                type: 'server_error',
+                                details: error instanceof Error ? error.message : 'Unknown error',
+                                request_id: generateId(),
+                        },
+                };
+                return new Response(JSON.stringify(errorResponse), {
+                        status: 500,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                });
+        }
+}
+
+export default { fetch: handleRequest };
