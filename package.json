@@ -22,7 +22,7 @@
     "gemini-models": "tsx model_info/gemini-models.ts",
     "openai-models": "tsx model_info/openai-models.ts",
     "cloudflare-models": "tsx model_info/cloudflare-models.ts",
-    "deplo": "pnpm run test:unit && wrangler deploy"
+    "deploy:tested": "pnpm run test:unit && wrangler deploy"
   },
   "keywords": [
     "cloudflare",
