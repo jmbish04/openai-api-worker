@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npx wrangler dev",
     "deploy:locally": "bash deploy.sh",
-    "deploy": "wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "check-problems": "./check-problems.sh",
     "tail": "npx wrangler tail",
     "logs": "bash logs.sh",
