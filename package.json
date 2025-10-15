@@ -15,12 +15,14 @@
     "test:post-deploy": "echo 'Running post-deployment tests...' && pnpm run test:worker-endpoints && pnpm run test:service-binding && pnpm run test:core-api",
     "test:service-binding": "node test/service-binding-test.js",
     "test:core-api": "node test/core-api-test.js",
+    "test:unit": "tsx --test test/unit/endpoints.test.ts",
     "deploy:staging": "npx wrangler deploy --env staging",
     "type-check": "tsc --noEmit -p .",
     "build": "tsc",
     "gemini-models": "tsx model_info/gemini-models.ts",
     "openai-models": "tsx model_info/openai-models.ts",
-    "cloudflare-models": "tsx model_info/cloudflare-models.ts"
+    "cloudflare-models": "tsx model_info/cloudflare-models.ts",
+    "deplo": "pnpm run test:unit && wrangler deploy"
   },
   "keywords": [
     "cloudflare",
