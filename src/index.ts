@@ -17,6 +17,7 @@ import { handleCompletions, handleCompletionsWithMemory, handleModelsRequest, ha
 import { runEndpointHealthChecks } from './health';
 import { handleChatCompletions, handleStructuredChatCompletions, handleTextChatCompletions, handleCodexRoute } from './routing';
 import { debugLog, errorLog, generateId } from './utils';
+import { getRequestQueue } from './request-queue';
 
 const PUBLIC_ROUTES: Record<string, string> = {
         '/': '/index.html',
@@ -114,47 +115,34 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
                 }
                 debugLog(env, 'Authentication successful');
 
-                const codexResponse = await handleCodexRoute(request, env, CORS_HEADERS);
-                if (codexResponse) {
-                        return codexResponse;
-                }
+                        const requestQueue = getRequestQueue(env);
 
-                switch (path) {
-                        case '/v1/chat/completions':
-                                return handleChatCompletions(request, env, CORS_HEADERS);
-                        case '/v1/chat/completions/structured':
-                                return handleStructuredChatCompletions(request, env, CORS_HEADERS);
-                        case '/v1/chat/completions/text':
-                                return handleTextChatCompletions(request, env, CORS_HEADERS);
-                        case '/v1/models':
-                                return handleModelsRequest(request, env, CORS_HEADERS);
-                        case '/v1/completions':
-                                return handleCompletions(request, env, CORS_HEADERS);
-                        case '/v1/completions/withmemory':
-                                return handleCompletionsWithMemory(request, env, CORS_HEADERS);
-                        case '/test/apis':
-                                return handleTestAPIs(request, env, CORS_HEADERS);
-                        default:
-                                return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
-                                        status: 404,
-                                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-                                });
-                }
-        } catch (error) {
-                errorLog('Unhandled worker error', error);
-                const errorResponse = {
-                        error: {
-                                message: 'Internal Server Error',
-                                type: 'server_error',
-                                details: error instanceof Error ? error.message : 'Unknown error',
-                                request_id: generateId(),
-                        },
-                };
-                return new Response(JSON.stringify(errorResponse), {
-                        status: 500,
-                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
-                });
-        }
-}
+                        const codexResponse = await handleCodexRoute(request, env, corsHeaders);
+                        if (codexResponse) {
+                                return codexResponse;
+                        }
+
+                        // Route API requests to their respective handlers.
+                        switch (path) {
+                                case '/v1/chat/completions':
+                                        return requestQueue.enqueue(() => handleChatCompletions(request, env, corsHeaders));
+                                case '/v1/chat/completions/structured':
+                                        return requestQueue.enqueue(() => handleStructuredChatCompletions(request, env, corsHeaders));
+                                case '/v1/chat/completions/text':
+                                        return requestQueue.enqueue(() => handleTextChatCompletions(request, env, corsHeaders));
+                                case '/v1/models':
+                                        return requestQueue.enqueue(() => handleModelsRequest(request, env, corsHeaders));
+                                case '/v1/completions':
+                                        return requestQueue.enqueue(() => handleCompletions(request, env, corsHeaders));
+                                case '/v1/completions/withmemory':
+                                        return requestQueue.enqueue(() => handleCompletionsWithMemory(request, env, corsHeaders));
+                                case '/test/apis':
+                                        return requestQueue.enqueue(() => handleTestAPIs(request, env, corsHeaders));
+                                default:
+                                        return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
+                                                status: 404,
+                                                headers: { 'Content-Type': 'application/json', ...corsHeaders },
+                                        });
+			}
 
 export default { fetch: handleRequest };

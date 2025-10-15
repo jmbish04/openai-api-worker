@@ -6,12 +6,12 @@
  *              Centralizing this logic makes the security model easier to manage and update.
  */
 
-import { debugLog } from './utils';
+import { debugLog, errorLog } from './utils';
 
 /**
  * Authenticates an incoming request based on the `Authorization` header.
  * It checks for the presence of a Bearer token and validates it against the
- * `WORKER_API_KEY` environment variable. In debug mode, this validation can be bypassed.
+ * `WORKER_API_KEY` environment variable.
  *
  * @param {Request} request - The incoming HTTP request object.
  * @param {Env} env - The worker's environment object, containing secrets and configuration.
@@ -30,17 +30,16 @@ export async function authenticateRequest(request: Request, env: Env): Promise<{
 	}
 	const token = authHeader.replace('Bearer ', '');
 
-	// In debug mode or if the API key is not set, bypass validation for development convenience.
-	if (env.DEBUG_LOGGING === 'true' || !env.WORKER_API_KEY) {
-		debugLog(env, 'Development mode: bypassing API key validation');
-		return { success: true };
-	}
+        if (!env.WORKER_API_KEY) {
+                errorLog('WORKER_API_KEY is not configured in the environment');
+                return { success: false, error: 'Service authentication is not configured' };
+        }
 
-	// Compare the provided token with the one stored in environment variables.
-	if (token !== env.WORKER_API_KEY) {
-		debugLog(env, 'API key validation failed');
-		return { success: false, error: 'Invalid API key' };
-	}
+        // Compare the provided token with the one stored in environment variables.
+        if (token !== env.WORKER_API_KEY) {
+                debugLog(env, 'API key validation failed');
+                return { success: false, error: 'Invalid API key' };
+        }
 
-	return { success: true };
+        return { success: true };
 }

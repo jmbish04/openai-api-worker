@@ -39,12 +39,54 @@ export function debugLog(env: Env, message: string, data: Record<string, any> | 
  * @returns {void}
  */
 export function errorLog(message: string, error: any | null = null): void {
-	const timestamp = new Date().toISOString();
-	if (error) {
-		console.error(`[${timestamp}] ERROR: ${message}:`, error instanceof Error ? error.stack : JSON.stringify(error));
-	} else {
-		console.error(`[${timestamp}] ERROR: ${message}`);
-	}
+        const timestamp = new Date().toISOString();
+        if (error) {
+                console.error(`[${timestamp}] ERROR: ${message}:`, error instanceof Error ? error.stack : JSON.stringify(error));
+        } else {
+                console.error(`[${timestamp}] ERROR: ${message}`);
+        }
+}
+
+/**
+ * Truncates long strings so that verbose logs remain readable and avoid exceeding
+ * platform log limits.
+ *
+ * @param {string} value - The string value to truncate.
+ * @param {number} [maxLength=2000] - The maximum number of characters to retain.
+ * @returns {string} The truncated string with an indicator if it was shortened.
+ */
+export function truncateForLog(value: string, maxLength = 2000): string {
+        if (value.length <= maxLength) {
+                return value;
+        }
+
+        const trimmed = value.slice(0, maxLength);
+        return `${trimmed}\u2026 [truncated ${value.length - maxLength} chars]`;
+}
+
+/**
+ * Logs a provider response payload in a consistent, verbose manner while ensuring
+ * the payload remains log-friendly.
+ *
+ * @param {Env} env - The worker environment containing logging flags.
+ * @param {string} provider - The provider name used as a prefix for the log entry.
+ * @param {unknown} payload - The payload to log.
+ * @param {Record<string, unknown>} [context={}] - Additional context to include alongside the payload.
+ * @returns {void}
+ */
+export function logAIResponse(env: Env, provider: string, payload: unknown, context: Record<string, unknown> = {}): void {
+        try {
+                const serialized = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                debugLog(env, `${provider} AI response`, {
+                        ...context,
+                        preview: truncateForLog(serialized),
+                });
+        } catch (error) {
+                debugLog(env, `${provider} AI response (serialization failed)`, {
+                        ...context,
+                        error: error instanceof Error ? error.message : 'Unknown serialization error',
+                });
+        }
 }
 
 /**

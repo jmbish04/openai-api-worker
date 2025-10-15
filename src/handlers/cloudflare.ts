@@ -10,7 +10,7 @@
 import { saveMemoryContext } from '../memory';
 import { convertMessages } from '../models';
 import type { ChatCompletion } from 'openai/resources/chat/completions';
-import { debugLog, errorLog, generateId } from '../utils';
+import { debugLog, errorLog, generateId, logAIResponse, truncateForLog } from '../utils';
 
 /**
  * Handles a chat completion request directed to a Cloudflare AI model.
@@ -78,6 +78,7 @@ async function handleCloudflareRequest(params: any, env: Env, corsHeaders: Recor
             const { readable, writable } = new TransformStream();
             const writer = writable.getWriter();
             const encoder = new TextEncoder();
+            const decoder = new TextDecoder();
 
             const streamResponse = async () => {
                 const reader = responseStream.getReader();
@@ -85,6 +86,16 @@ async function handleCloudflareRequest(params: any, env: Env, corsHeaders: Recor
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) break;
+                        if (value) {
+                            try {
+                                const chunkText = decoder.decode(value, { stream: true });
+                                if (chunkText) {
+                                    debugLog(env, 'Cloudflare stream chunk', { preview: truncateForLog(chunkText) });
+                                }
+                            } catch (logError) {
+                                debugLog(env, 'Cloudflare stream chunk decode failed', { error: logError instanceof Error ? logError.message : 'Unknown decode error' });
+                            }
+                        }
                         await writer.write(value); // Pass through the Server-Sent Event chunks.
                     }
                     const finalChunk = `data: [DONE]\n\n`;
@@ -123,6 +134,8 @@ async function handleCloudflareRequest(params: any, env: Env, corsHeaders: Recor
                 }],
                 usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 } // Usage data not provided by Cloudflare AI.
             };
+
+            logAIResponse(env, 'Cloudflare', openaiResponse, { model: params.originalModel });
 
             return new Response(JSON.stringify(openaiResponse), {
                 headers: { 'Content-Type': 'application/json', ...corsHeaders }
