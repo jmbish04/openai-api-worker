@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Python Modules · OpenAI API Worker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px 20px 60px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.6rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav a {
+            padding: 10px 18px;
+            border-radius: 8px;
+            background: rgba(102, 126, 234, 0.12);
+            color: #334155;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: rgba(102, 126, 234, 0.2);
+        }
+
+        .content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .intro {
+            margin-bottom: 30px;
+        }
+
+        .intro p {
+            margin-bottom: 10px;
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 10px 18px rgba(102, 126, 234, 0.12);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            color: #4338ca;
+        }
+
+        .card ul {
+            margin-left: 20px;
+            color: #475569;
+        }
+
+        .card ul li {
+            margin-bottom: 6px;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 18px;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #5a67d8;
+        }
+
+        .note {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 12px;
+            background: rgba(102, 126, 234, 0.12);
+            color: #1f2937;
+        }
+
+        code {
+            background: rgba(15, 23, 42, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⬇️ Download Python Modules</h1>
+            <p>Pre-built clients that connect to your OpenAI-compatible worker, complete with environment setup helpers.</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">← Back to Overview</a>
+            <a href="/openapi.json" target="_blank" rel="noopener noreferrer">OpenAPI Spec</a>
+            <a href="https://developers.cloudflare.com/workers-ai/models/llama-4-scout-17b-16e-instruct/" target="_blank" rel="noopener noreferrer">Llama 4 Docs</a>
+        </div>
+
+        <div class="content">
+            <div class="intro">
+                <p>Each download includes a helper that ensures a local <code>.env</code> file contains <code>WORKER_URL</code> and <code>WORKER_API_KEY</code>. The default URL is populated for you—just edit the key.</p>
+                <p>Place the downloaded script in a project folder, run it with Python 3.9+, and install dependencies with <code>pip install requests</code> (plus <code>sqlite3</code> from the standard library).</p>
+            </div>
+
+            <div class="download-grid">
+                <div class="card">
+                    <h2>Python Basic</h2>
+                    <p>A minimal example that sends a chat completion request using Workers AI through this worker.</p>
+                    <ul>
+                        <li>Ensures the <code>.env</code> file exists</li>
+                        <li>Calls <code>/v1/chat/completions</code> with Llama 4 Scout</li>
+                        <li>Prints the assistant response to the console</li>
+                    </ul>
+                    <a class="download-btn" href="/downloads/python-basic.py" download>Download python-basic.py</a>
+                </div>
+
+                <div class="card">
+                    <h2>Python Structured Response</h2>
+                    <p>Request JSON-safe answers from <code>@cf/meta/llama-4-scout-17b-16e-instruct</code> using <code>response_format</code>.</p>
+                    <ul>
+                        <li>Auto-creates or updates <code>.env</code></li>
+                        <li>Demonstrates JSON schema validation</li>
+                        <li>Parses the structured payload into Python objects</li>
+                    </ul>
+                    <a class="download-btn" href="/downloads/python-structured-llama4.py" download>Download python-structured-llama4.py</a>
+                </div>
+
+                <div class="card">
+                    <h2>Python Agentic Patterns</h2>
+                    <p>Showcases tool-calling loops for function-style automation using Workers AI.</p>
+                    <ul>
+                        <li>Mocks tool results locally</li>
+                        <li>Feeds tool outputs back into the conversation</li>
+                        <li>Highlights multi-turn agent orchestration</li>
+                    </ul>
+                    <a class="download-btn" href="/downloads/python-agentic-patterns.py" download>Download python-agentic-patterns.py</a>
+                </div>
+
+                <div class="card">
+                    <h2>Python Advanced Client</h2>
+                    <p>A reusable class with file helpers, SQLite utilities, and structured-response helpers.</p>
+                    <ul>
+                        <li>Default model: <code>@cf/openai/gpt-oss-120b</code></li>
+                        <li>Loads system instructions from disk</li>
+                        <li>Includes <code>structured_llama4</code> and code-fence cleanup utilities</li>
+                    </ul>
+                    <a class="download-btn" href="/downloads/python-advanced-worker-client.py" download>Download python-advanced-worker-client.py</a>
+                </div>
+            </div>
+
+            <div class="note">
+                <strong>Tip:</strong> After downloading, open the generated <code>.env</code> file and set <code>WORKER_API_KEY</code>. Keep the key secret—never commit it to version control.
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
