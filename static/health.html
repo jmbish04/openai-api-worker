@@ -239,7 +239,10 @@
                 setStatus('fail', 'Unable to fetch results');
                 const item = document.createElement('div');
                 item.className = 'result-item';
-                item.innerHTML = `<div class="result-error">${error instanceof Error ? error.message : String(error)}</div>`;
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'result-error';
+                    errorDiv.textContent = error instanceof Error ? error.message : String(error);
+                    item.appendChild(errorDiv);
                 resultsContainer.appendChild(item);
             } finally {
                 runButton.disabled = false;
