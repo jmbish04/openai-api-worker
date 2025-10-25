@@ -16,7 +16,8 @@ import { authenticateRequest } from './auth';
 import { handleCompletions, handleCompletionsWithMemory, handleModelsRequest, handleTestAPIs } from './endpoints';
 import { runEndpointHealthChecks } from './health';
 import { handleChatCompletions, handleStructuredChatCompletions, handleTextChatCompletions, handleCodexRoute } from './routing';
-import { debugLog, errorLog, generateId } from './utils';
+// FIX: Removed unused 'generateId' import
+import { debugLog, errorLog } from './utils';
 import { getRequestQueue } from './request-queue';
 
 const PUBLIC_ROUTES: Record<string, string> = {
@@ -117,6 +118,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
         const requestQueue = getRequestQueue(env);
 
+        // FIX: Use CORS_HEADERS instead of undefined corsHeaders
         const codexResponse = await handleCodexRoute(request, env, CORS_HEADERS);
         if (codexResponse) {
             return codexResponse;
@@ -125,25 +127,34 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
         // Route API requests to their respective handlers.
         switch (path) {
             case '/v1/chat/completions':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleChatCompletions(request, env, CORS_HEADERS));
             case '/v1/chat/completions/structured':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleStructuredChatCompletions(request, env, CORS_HEADERS));
             case '/v1/chat/completions/text':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleTextChatCompletions(request, env, CORS_HEADERS));
             case '/v1/models':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleModelsRequest(request, env, CORS_HEADERS));
             case '/v1/completions':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleCompletions(request, env, CORS_HEADERS));
             case '/v1/completions/withmemory':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleCompletionsWithMemory(request, env, CORS_HEADERS));
             case '/test/apis':
+                // FIX: Use CORS_HEADERS
                 return requestQueue.enqueue(() => handleTestAPIs(request, env, CORS_HEADERS));
             default:
                 return new Response(JSON.stringify({ error: { message: 'Not Found', type: 'invalid_request_error' } }), {
                     status: 404,
+                    // FIX: Use CORS_HEADERS
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
                 });
         }
+    // ADDED: catch block for the main try
     } catch (error) {
         errorLog('Unhandled error in handleRequest', error);
         return new Response(JSON.stringify({ error: { message: 'Internal Server Error', type: 'internal_error' } }), {
@@ -151,6 +162,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
             headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
         });
     }
-}
+} // ADDED: closing brace for handleRequest
 
 export default { fetch: handleRequest };
+
