@@ -157,12 +157,12 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
                 }
         } catch (error) {
                 errorLog('Unhandled error in handleRequest', error);
-                const failureHeaders = { ...corsHeaders };
+                
                 return new Response(
                         JSON.stringify({ error: { message: 'Internal Server Error', type: 'server_error' } }),
                         {
                                 status: 500,
-                                headers: { 'Content-Type': 'application/json', ...failureHeaders },
+                                headers: { 'Content-Type': 'application/json' },
                         },
                 );
         }
